@@ -42,3 +42,6 @@
 
 # Mathematica notebooks
 *.nb
+
+# Code::Blocks project files
+*.cbp
