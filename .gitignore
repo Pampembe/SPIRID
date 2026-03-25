@@ -45,3 +45,4 @@
 
 # Code::Blocks project files
 *.cbp
+*.layout

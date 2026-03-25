@@ -4,8 +4,12 @@
 #include <iostream> //for I/O operations
 
 #include <vector> //grid based coordinate system uses vector<bool> to label points
+#include <list>
 
+#include <numbers> //for standard math functions and to define constants related to pi
 #include <cmath> //for standard math functions and to define constants related to pi
+
+/*
 #define fp_type float //standard floating point type for calculations
 #define SQRT sqrtf //sqrt for float numbers
 #define ACOS acosf //acos for float numbers
@@ -13,6 +17,16 @@
 #define SIN  sinf //sin for float numbers
 #define COS  cosf //cos for float numbers
 #define LDEXP ldexpf //multiply float by 2^exp
+#define ABS std::abs
+*/
+
+#define fp_type double //standard floating point type for calculations
+#define SQRT sqrt //sqrt for float numbers
+#define ACOS acos //acos for float numbers
+#define ASIN asin //asin for float numbers
+#define SIN  sin //sin for float numbers
+#define COS  cos //cos for float numbers
+#define LDEXP ldexp //multiply float by 2^exp
 #define ABS std::abs
 
 #define scaleExp_type unsigned long long
@@ -56,6 +70,16 @@ public:
 	inline scaleExp_type getExponent() const {
 		return scaleExponent;
 	};
+
+	inline bool operator < (const scaledFP& y) const
+	{
+		scaleExp_type minExp = std::min(y.scaleExponent,scaleExponent);
+		if (y.scaleExponent > scaleExponent)
+		{
+			return (LDEXP(mantissa,-(y.scaleExponent-scaleExponent)) < y.mantissa);
+		}
+		return (mantissa < LDEXP(y.mantissa,-(scaleExponent-y.scaleExponent)));
+	}
 
 	operator fp_type() const; //convert to standard float
 };
@@ -101,7 +125,7 @@ public:
 	inline sPolar(fp_type t, fp_type p) : theta(t), phi(p) {
 		normalize();
 	};
-	void set(fp_type t, fp_type p);
+	const sPolar& set(fp_type t, fp_type p);
 	inline angle getTheta() const {
 		return angle(theta);
 	};
@@ -113,6 +137,20 @@ public:
 };
 //output for polar coordinates
 std::ostream& operator << (std::ostream& out, const sPolar&);
+
+
+
+
+class sGrid;
+
+
+
+template<class domain_type = std::pair<sGrid,unsigned short>, class image_type = scaledFP>
+struct funcGraphPoint
+{
+	domain_type dPoint;
+	image_type fValue;
+};
 
 
 
@@ -154,7 +192,7 @@ public:
 	};
 	//get & set face code: (0..7) at level 0, (0..3) at other levels
 	unsigned short at(size_t level) const;
-	void setExtend(size_t level, unsigned short faceCode);
+	const sGrid& setExtend(size_t level, unsigned short faceCode);
 
 	//stepping through the grid at a certain level
 	sGrid neighborFace(size_t level, unsigned short edgeCode) const
@@ -172,7 +210,7 @@ public:
 	//calculate the area of a face
 	angle area(size_t level) const
 	{
-	    return area(level, calcFaceGeometry(level));
+		return area(level, calcFaceGeometry(level));
 	};
 	//calculate an edge length (code 1..3)
 	angle edgeLength(size_t level, unsigned short edgeCode) const;
@@ -224,10 +262,75 @@ public:
 		return accuracyBits;
 	};
 
+
+
+	bool stepToNextSGrid(size_t level, size_t startLevel = 0)
+	{
+		if (level == 0)
+		{
+			if (at(0) == 7) return false;
+			else
+			{
+				setExtend(0,at(0)+1);
+				return true;
+			}
+		}
+		else if (level == startLevel)
+		{
+			if (at(level) == 3) return false;
+			else
+			{
+				setExtend(level,at(level)+1);
+				return true;
+			}
+		}
+		else
+		{
+			if (at(level) == 3)
+			{
+				setExtend(level,0);
+				return stepToNextSGrid(level-1,startLevel);
+			}
+			else
+			{
+				setExtend(level,at(level)+1);
+				return true;
+			}
+		}
+	}
+
+
+	/* special points on the sphere */
+	static const std::pair<sGrid,unsigned short> NorthOct0;
+	static const std::pair<sGrid,unsigned short> WestOct0;
+	static const std::pair<sGrid,unsigned short> SouthOct7;
+	static const std::pair<sGrid,unsigned short> EastOct7;
+	static std::pair<sGrid,unsigned short> primeRef;
+	static std::pair<sGrid,unsigned short> seconRef;
+
 protected:
 	//get and set a face code (0..3) or (0..7) at a certain level
 	unsigned short operator [] (size_t level) const;
-	void set(size_t level, unsigned short faceCode);
+	const sGrid& set(size_t level, unsigned short faceCode);
+
+	inline static unsigned short nextNode(unsigned short code) {
+		return newNodeCodes[code];
+	};
+	inline static unsigned short nextFace(unsigned short code) {
+		return newFaceCodes[code];
+	};
+	inline static unsigned short newCode(unsigned short code1, unsigned short code2, unsigned short code3 = 0) {
+		return newCodes[code1+code2+code3];
+	};
+
+	//assign the neighbor of the current face to an existing sGrid object, assuming its depth is already at level
+	static sGrid& assignNeighborFace(size_t level, unsigned short edgeCode, sGrid& neighbor, bool& orientationMatch);
+
+	inline const sGrid& set(const sGrid& Q)
+	{
+		gridCode = Q.gridCode;
+		return *this;
+	};
 
 private:
 	//internal representation of the gridCode
@@ -242,8 +345,6 @@ private:
 
 
 
-	//assign the neighbor of the current face to an existing sGrid object, assuming its depth is already at level
-	sGrid& assignNeighborFace(size_t level, unsigned short edgeCode, sGrid& neighbor, bool& orientationMatch) const;
 
 
 
@@ -299,6 +400,87 @@ private:
 	};
 
 
+	/*
+		struct point
+		{
+			sGrid gridFace;
+			unsigned short location;
+		};
+	*/
+
+
+	//function to find neighbor nodes of a given node P (assuming location in 1,2,3) --> result in neighborList
+	static std::list<std::pair<sGrid,unsigned short> >&
+	collectNeighborNodesTo(std::list<std::pair<sGrid,unsigned short> >& neighborList,
+	                       size_t level,
+	                       const sGrid& P,
+	                       unsigned short location);
+	//function to find neighbor points (including face centers) of a given node P --> result in neighborList
+	static std::list<std::pair<sGrid,unsigned short> >&
+	collectNeighborPointsTo(std::list<std::pair<sGrid,unsigned short> >& neighborList,
+	                        size_t level,
+	                        const sGrid& P,
+	                        unsigned short location);
+	//function to collect nodes of a given face --> result in neighborList
+	static std::list<std::pair<sGrid,unsigned short> >&
+	collectFaceNodesTo(std::list<std::pair<sGrid,unsigned short> >& neighborList,
+	                   size_t level,
+	                   const sGrid& P,
+	                   unsigned short location);
+
+
+
+public:
+
+
+
+	static funcGraphPoint<> searchMinPoint(size_t maxLevel, scaledFP (*)(size_t, const sGrid&, unsigned short));
+	// function to search for a local minimum node around a node at a given grid level: reference type arguments are used to return results
+	static void searchLocalMinAtLevel(
+	    size_t level,
+	    sGrid& refMinFace, // we search for a local minimum around a reference node, this is the corresponding grid face
+	    unsigned short& refMinLocation, // the location of the reference node inside refMinFace
+	    scaledFP& refMinValue, // the function value of minFunc at the reference node
+	    unsigned short& refEdgeCode, // a reference edge inside refMinFace that connects to the reference node
+	    sGrid& refEdgeNeighborFace, // neighbor face next to refMinFace across refEdge
+	    bool& refEdgeOrientationMatch, // whether orientation of left and right face of refEdge is matched
+	    const scaledFP& refMin2ndValue, // the function value at the 2nd node of refEdge
+	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short) // function to minimize
+	);
+	// function to search for a local minimum node around an edge in the next grid level: reference type arguments are used to return results
+	static void searchLocalMinNextLevel(
+	    size_t lowerLevel,
+	    sGrid& refMinFace, // the face where a local minimum of minFunc was found (at lowerLevel)
+	    unsigned short& refMinLocation, // the location inside face where the local minimum of minFunc was found (at lowerLevel)
+	    scaledFP& refMinValue, // the minimum function value of minFunc (at nodes in lowerLevel)
+	    unsigned short& refEdgeCode, // the edge inside the minimum face connecting points with smallest and 2nd smallest minFunc values
+	    sGrid& refEdgeNeighborFace, // neighbor face next to refMinPoint across refEdge
+	    bool& refEdgeOrientationMatch, // whether orientation of left and right face of refEdge is matched
+	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short) // function to minimize
+	);
+	static unsigned short minIndexLocalSearch(const scaledFP& centerValue, unsigned short outerValCount, const scaledFP** outerValues);
+	static unsigned short min2ndIndexLocalSearch(unsigned short min1stIndex, const scaledFP& centerValue, unsigned short outerValCount, const scaledFP** outerValues);
+
+	static funcGraphPoint<>& localSearchMinNode(
+	    size_t level,
+	    funcGraphPoint<>& reference,
+	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short));
+	static funcGraphPoint<>& localSearchMinPoint(
+	    size_t level,
+	    funcGraphPoint<>& reference,
+	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short));
+	static funcGraphPoint<>& getMinPoint(
+	    const std::list<std::pair<sGrid,unsigned short> >& pointList,
+	    size_t level,
+	    funcGraphPoint<>& reference,
+	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short));
+
+	static scaledFP test(size_t level, const sGrid& P, unsigned short location) {
+		sPolar TP(P.toPolar(level,location));
+		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/5,pi/3)),0);
+//		return scaledFP(std::abs((TP.getTheta()-pi/8.)) + std::abs((TP.getPhi()-pi/8.)),0);
+	};
+
 
 	/* auxiliary functions for geometry calculations */
 	//calculate third edge length d in a spherical triangle, given side-angle-side
@@ -306,15 +488,15 @@ private:
 	static fp_type calcSinEdgeHalfSAS(scaleExp_type scale, fp_type SinaSq, fp_type cosDelta, fp_type SinbSq);
 	//calculate third edge length d in a spherical triangle, given side-angle-side (all edge lengths L as 2^scale*Sin(L)^2)
 	//the return value does not distinguish between angle and pi-angle, since the return value is basically sin(angle)^2
-	inline static fp_type calcSinSqEdgeSAS(scaleExp_type scale, fp_type SinaSq, fp_type cosDelta, fp_type SinbSq)
+	inline static fp_type calcSinSqEdgeSAS(scaleExp_type scaleSq, fp_type SinaSq, fp_type cosDelta, fp_type SinbSq)
 	{
-		return SinaSq + SinbSq - (cosDelta*cosDelta+1) * SinaSq*LDEXP(SinbSq,-scale)
-		       - 2*cosDelta * SQRT(SinaSq*SinbSq * (1-LDEXP(SinaSq,-scale))*(1-LDEXP(SinbSq,-scale)));
+		return SinaSq + SinbSq - (cosDelta*cosDelta+1) * SinaSq*LDEXP(SinbSq,-scaleSq)
+		       - 2*cosDelta * SQRT(SinaSq*SinbSq * (1-LDEXP(SinaSq,-scaleSq))*(1-LDEXP(SinbSq,-scaleSq)));
 	};
 	//for edge bisections: calculate 4*Sin(a/2)^2 from Sin(a)^2
-	inline static fp_type calcEdgeBisection(scaleExp_type scale, fp_type SinaSq)
+	inline static fp_type calcEdgeBisection(scaleExp_type scaleSq, fp_type SinaSq)
 	{
-		return (2*SinaSq)/(1 + SQRT(1 - LDEXP(SinaSq,-scale)));
+		return (2*SinaSq)/(1 + SQRT(1 - LDEXP(SinaSq,-scaleSq)));
 	};
 	//calculate the area of a face given pre-calculated geometry and edge bisection (as 2^(2*(level+1))*Sin[half edge lengths]^2)
 	static fp_type sinSqQuarterArea(size_t level,
@@ -364,18 +546,11 @@ private:
 	static const unsigned short newNodeCodes[4];
 	static const unsigned short newFaceCodes[4];
 	static const unsigned short newCodes[7];
-	inline static unsigned short nextNode(unsigned short code) {
-		return newNodeCodes[code];
-	};
-	inline static unsigned short nextFace(unsigned short code) {
-		return newFaceCodes[code];
-	};
-	inline static unsigned short newCode(unsigned short code1, unsigned short code2, unsigned short code3 = 0) {
-		return newCodes[code1+code2+code3];
-	};
 };
 //output for grid coordinates as face codes
 std::ostream& operator << (std::ostream& out, const sGrid&);
+
+
 
 
 

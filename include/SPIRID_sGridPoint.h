@@ -11,33 +11,56 @@ namespace SPIRID
 */
 class sGridPoint : public sGrid
 {
+	unsigned short inFaceLoc;
 public:
-	inline sGridPoint(size_t depth) : sGrid(depth+1) {};
+	static const sGridPoint North;
+	static const sGridPoint South;
+
+	inline void set(const sGridPoint& Q)
+	{
+		sGrid::set(Q);
+		inFaceLoc = Q.inFaceLoc;
+	};
+
+	static sGridPoint searchPoint(scaledFP (*)(const sGridPoint&));
+	static sGridPoint localSearchPoint(size_t level, const sGridPoint& P, scaledFP minFunctionValue, scaledFP (*minFunc)(const sGridPoint&));
+	static scaledFP test(const sGridPoint& P) {
+		return scaledFP(P.inFaceLoc+P.at(0),0);
+	};
+
+	inline sGridPoint(size_t depth) : sGrid(depth) {
+		inFaceLoc = 0;
+	};
 	inline sGridPoint(const sGrid& P) : sGrid(P) {
-		resize(depth()+1);
+		inFaceLoc = 0;
+	};
+	inline sGridPoint(const sGridPoint& P) : sGrid(P) {
+		inFaceLoc = P.inFaceLoc;
 	};
 	sGridPoint(const std::vector<bool>& P, unsigned short location);
 
-	inline size_t depth() const {
-		return operator[](sGrid::depth()-1);
-	}
-	inline unsigned short at(size_t level) const {
-	    if (level==sGrid::depth()) return 0;
-	    return at(level);
-	}
 	inline unsigned short location() const {
-		return operator[](sGrid::depth());
+		return inFaceLoc;
 	}
-	inline void setLocation(unsigned short x) {
-	    set(sGrid::depth(),x);
+	inline sGridPoint& setLocation(unsigned short x) {
+		inFaceLoc = x;
+		return *this;
 	}
 
 	inline static angle distance(const sGridPoint& P1, const sGridPoint& P2)
 	{
 		return sGrid::distance(P1.depth(), P1, P1.location(), P2.depth(), P2, P2.location());
 	};
-};
 
+	inline sGridPoint& assignNeighborFace(size_t level, unsigned short edgeCode, sGridPoint& neighbor, bool& orientationMatch)
+	{
+		sGrid::assignNeighborFace(level, edgeCode, neighbor, orientationMatch);
+		return *this;
+	};
+
+};
+//output for grid coordinates as face codes
+//std::ostream& operator << (std::ostream& out, const sGridPoint& P);
 
 } // namespace SPIRID
 

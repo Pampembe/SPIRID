@@ -1,0 +1,35 @@
+# depslib dependency file v1.0
+1773695437 source:c:\users\pampembe\documents\projekte\spirid\spirid\main.cpp
+	<iostream>
+	<cmath>
+	<SPIRID.h>
+
+1773696600 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid.h
+	<iostream>
+	<vector>
+	<list>
+	<cmath>
+
+1773693243 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_angle.cpp
+	<SPIRID.h>
+
+1773693243 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_scaledfp.cpp
+	<limits>
+	<SPIRID.h>
+
+1773693243 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgridpoint.cpp
+	<SPIRID_sGridPoint.h>
+	<stack>
+
+1773693243 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid_sgridpoint.h
+	<SPIRID.h>
+
+1773693243 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_spolar.cpp
+	<SPIRID.h>
+	<cmath>
+
+1773696521 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgrid.cpp
+	<cmath>
+	<limits>
+	<SPIRID.h>
+
