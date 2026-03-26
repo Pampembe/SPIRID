@@ -21,19 +21,26 @@ void SPIRID::sGrid::setAccuracyBits(size_t bitCount)
 
 
 //special points
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::NorthOct0 = {SPIRID::sGrid({0,0,0}),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct0  = {SPIRID::sGrid({0,0,0}),2};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::SouthOct7 = {SPIRID::sGrid({1,1,1}),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct7  = {SPIRID::sGrid({1,1,1}),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::NorthOct0 = {SPIRID::sGrid(std::vector<bool>({0,0,0})),3};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::SouthOct7 = {SPIRID::sGrid(std::vector<bool>({1,1,1})),3};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),2};
 
 
 
 //sGrid constructors
-SPIRID::sGrid::sGrid(const std::vector<bool>& P) : gridCode(P)
+SPIRID::sGrid::sGrid(const std::vector<bool>& bitCode) : gridCode(bitCode)
 {
 	size_t size = gridCode.size();
 	if (size<3) gridCode.resize(3);
 	if (size%2==0) gridCode.resize(size+1);
+}
+SPIRID::sGrid::sGrid(const std::vector<unsigned short>& faceCodes) : gridCode(1+2*faceCodes.size())
+{
+    for (size_t it = 0; it <= faceCodes.size(); ++it)
+    {
+        set(it, faceCodes[it]);
+    }
 }
 
 
@@ -54,6 +61,13 @@ const SPIRID::sGrid& SPIRID::sGrid::setExtend(size_t level, unsigned short faceC
 {
 	if (2*level+3>gridCode.size()) gridCode.resize(2*level+3);
 	return set(level, faceCode);
+}
+const SPIRID::sGrid& SPIRID::sGrid::reset(size_t level)
+{
+    size_t start = 2*level+1;
+    if (level == 0) start = 0;
+    std::fill(gridCode.begin()+start, gridCode.end(), false);
+    return *this;
 }
 const SPIRID::sGrid& SPIRID::sGrid::set(size_t level, unsigned short faceCode)
 {
@@ -146,6 +160,386 @@ const SPIRID::sGrid& SPIRID::sGrid::set(size_t level, unsigned short faceCode)
 			gridCode[2*level+2]=true;
 			return *this;
 		}
+		}
+	}
+}
+
+
+SPIRID::sGrid
+SPIRID::sGrid::neighborFace(size_t level, unsigned short edgeCode) const
+{
+	bool orientationMatch = true;
+	return neighborFace(level, edgeCode, orientationMatch);
+};
+SPIRID::sGrid
+SPIRID::sGrid::neighborFace(size_t level, unsigned short edgeCode, bool& orientationMatch) const
+{
+	sGrid neighbor(*this);
+	neighbor.resize(level);
+	orientationMatch = true;
+	return assignNeighborFace(level, edgeCode, neighbor, orientationMatch);
+};
+std::list<SPIRID::sGrid>
+SPIRID::sGrid::neighborFaces(size_t level) const
+{
+	std::list<SPIRID::sGrid> neighbors;
+	neighbors.push_back(*this);
+	neighbors.back().resize(level);
+	neighbors.push_back(neighborFace(level,1));
+	neighbors.push_back(neighborFace(level,2));
+	neighbors.push_back(neighborFace(level,3));
+	return neighbors;
+};
+std::list<SPIRID::sGrid>
+SPIRID::sGrid::edgeNeighborFaces(size_t level, unsigned short edgeCode) const
+{
+	std::list<SPIRID::sGrid> neighbors;
+	neighbors.push_back(*this);
+	neighbors.back().resize(level);
+	neighbors.push_back(neighborFace(level,edgeCode));
+	return neighbors;
+}
+std::list<SPIRID::sGrid>
+SPIRID::sGrid::nodeNeighborFaces(size_t level, unsigned short nodeCode) const
+{
+	std::list<SPIRID::sGrid> neighbors;
+	neighbors.push_back(*this);
+	neighbors.back().resize(level);
+
+	unsigned short edgeCodeLeft = nextNode(nodeCode);
+	unsigned short edgeCodeRight = nextNode(edgeCodeLeft);
+
+	bool orientationMatchLeft = true;
+	bool orientationMatchRight = true;
+	bool orientationMatchOther = true;
+
+	neighbors.push_back(neighborFace(level,edgeCodeLeft,orientationMatchLeft));
+
+	if (orientationMatchLeft)
+	{
+		neighbors.push_back(neighbors.back().neighborFace(level,nodeCode,orientationMatchOther));
+		if (orientationMatchOther)
+		{
+			neighbors.push_back(neighbors.back().neighborFace(level,edgeCodeRight,orientationMatchRight));
+		}
+		else
+		{
+			neighbors.push_back(neighbors.back().neighborFace(level,edgeCodeLeft,orientationMatchRight));
+		}
+
+		neighbors.push_back(neighborFace(level,edgeCodeRight));
+		if (orientationMatchRight)
+		{
+			neighbors.push_back(neighbors.back().neighborFace(level,nodeCode));
+		}
+		else
+		{
+			neighbors.push_back(neighbors.back().neighborFace(level,edgeCodeLeft));
+		}
+	}
+	else
+	{
+		neighbors.push_back(neighbors.back().neighborFace(level,edgeCodeRight,orientationMatchOther));
+
+		if (orientationMatchOther)
+		{
+			neighbors.push_back(neighbors.back().neighborFace(level,nodeCode));
+			neighbors.push_back(neighborFace(level,edgeCodeRight,orientationMatchRight));
+			//orientationMatchRight must be true by grid construction
+			neighbors.push_back(neighbors.back().neighborFace(level,nodeCode));
+		}
+		else // orientationMatchOther is false, i.e., there are only four neighbor faces
+		{
+			neighbors.push_back(neighborFace(level,edgeCodeRight,orientationMatchRight));
+		}
+	}
+
+	return neighbors;
+}
+std::list<std::pair<SPIRID::sGrid, unsigned short> >
+SPIRID::sGrid::nodeNeighborNodes(size_t level, unsigned short nodeCode) const
+{
+	std::list<std::pair<SPIRID::sGrid, unsigned short> > neighborNodes;
+	neighborNodes.push_back({*this, nodeCode});
+	neighborNodes.back().first.resize(level);
+
+	unsigned short edgeCodeLeft = nextNode(nodeCode);
+	unsigned short edgeCodeRight = nextNode(edgeCodeLeft);
+
+	bool orientationMatchLeft = true;
+	bool orientationMatchRight = true;
+	bool orientationMatchOther = true;
+
+	neighborNodes.push_back({neighborNodes.back().first, edgeCodeRight});
+	neighborNodes.push_back({neighborNodes.back().first.neighborFace(level,edgeCodeLeft,orientationMatchLeft), edgeCodeLeft});
+
+	if (orientationMatchLeft)
+	{
+		neighborNodes.push_back({neighborNodes.back().first.neighborFace(level,nodeCode,orientationMatchOther), nodeCode});
+
+		if (orientationMatchOther)
+		{
+			neighborNodes.push_back({neighborNodes.back().first.neighborFace(level,edgeCodeRight,orientationMatchRight), edgeCodeRight});
+		}
+		else
+		{
+			neighborNodes.push_back({neighborNodes.back().first.neighborFace(level,edgeCodeLeft,orientationMatchRight), edgeCodeLeft});
+		}
+
+		neighborNodes.push_back({neighborNodes.front().first.neighborFace(level,edgeCodeRight), edgeCodeRight});
+		neighborNodes.push_back({neighborNodes.front().first, edgeCodeLeft});
+	}
+	else
+	{
+		neighborNodes.push_back({neighborNodes.back().first.neighborFace(level,edgeCodeRight,orientationMatchOther), edgeCodeRight});
+
+		if (orientationMatchOther)
+		{
+			neighborNodes.push_back({neighborNodes.back().first.neighborFace(level,nodeCode), nodeCode});
+			neighborNodes.push_back({neighborNodes.front().first.neighborFace(level,edgeCodeRight,orientationMatchRight), edgeCodeRight});
+			//orientationMatchRight must be true by grid construction
+			neighborNodes.push_back({neighborNodes.front().first, edgeCodeLeft});
+		}
+		else // orientationMatchOther is false, i.e., there are only four neighbor faces
+		{
+			neighborNodes.push_back({neighborNodes.front().first, edgeCodeLeft});
+		}
+	}
+
+
+	return neighborNodes;
+}
+std::list<std::pair<SPIRID::sGrid, unsigned short> >
+SPIRID::sGrid::nodeConnectedEdges(size_t level, unsigned short nodeCode) const
+{
+	std::list<std::pair<SPIRID::sGrid, unsigned short> > connectedEdges;
+
+	unsigned short edgeCodeLeft = nextNode(nodeCode);
+	unsigned short edgeCodeRight = nextNode(edgeCodeLeft);
+
+	connectedEdges.push_back({*this, edgeCodeLeft});
+	connectedEdges.back().first.resize(level);
+
+	bool orientationMatchLeft = true;
+	bool orientationMatchRight = true;
+	bool orientationMatchOther = true;
+
+	connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeLeft,orientationMatchLeft), nodeCode});
+	if (orientationMatchLeft)
+	{
+		connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode,orientationMatchOther), edgeCodeRight});
+
+		if (orientationMatchOther)
+		{
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeRight,orientationMatchRight), edgeCodeLeft});
+			if (!orientationMatchRight) connectedEdges.back().second = nodeCode;
+		}
+		else
+		{
+			connectedEdges.back().second = edgeCodeLeft;
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeLeft,orientationMatchRight), edgeCodeRight});
+		}
+		if (orientationMatchRight)
+		{
+			connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), nodeCode});
+		}
+		else
+		{
+			connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), edgeCodeLeft});
+		}
+	}
+	else
+	{
+		connectedEdges.back().second = edgeCodeRight;
+		connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeRight,orientationMatchOther), nodeCode});
+
+		if (orientationMatchOther)
+		{
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode), edgeCodeLeft});
+			connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), nodeCode});
+		}
+		else // orientationMatchOther is false, i.e., there are only four neighbor faces
+		{
+			connectedEdges.back().second = edgeCodeLeft;
+		}
+	}
+	connectedEdges.push_back({connectedEdges.front().first, edgeCodeRight});
+
+	return connectedEdges;
+}
+std::list<std::pair<SPIRID::sGrid, unsigned short> >
+SPIRID::sGrid::nodeOuterRingEdges(size_t level, unsigned short nodeCode) const
+{
+	std::list<std::pair<SPIRID::sGrid, unsigned short> > connectedEdges;
+
+	unsigned short edgeCodeLeft = nextNode(nodeCode);
+	unsigned short edgeCodeRight = nextNode(edgeCodeLeft);
+
+	connectedEdges.push_back({*this, nodeCode});
+	connectedEdges.back().first.resize(level);
+
+	bool orientationMatchLeft = true;
+	bool orientationMatchRight = true;
+	bool orientationMatchOther = true;
+
+	connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeLeft,orientationMatchLeft), edgeCodeRight});
+	if (orientationMatchLeft)
+	{
+		connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode,orientationMatchOther), edgeCodeLeft});
+
+		if (orientationMatchOther)
+		{
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeRight,orientationMatchRight), nodeCode});
+			if (orientationMatchRight)
+			{
+				connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), edgeCodeLeft});
+				connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode), edgeCodeRight});
+			}
+			else
+			{
+				connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), edgeCodeLeft});
+				connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeLeft), edgeCodeRight});
+			}
+		}
+		else
+		{
+			connectedEdges.back().second = edgeCodeRight;
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeLeft,orientationMatchRight), nodeCode});
+
+			connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), edgeCodeLeft});
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode), edgeCodeLeft});
+		}
+	}
+	else
+	{
+		connectedEdges.back().second = nodeCode;
+		connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,edgeCodeRight,orientationMatchOther), edgeCodeLeft});
+
+		if (orientationMatchOther)
+		{
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode), edgeCodeRight});
+			connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), edgeCodeLeft});
+			connectedEdges.push_back({connectedEdges.back().first.neighborFace(level,nodeCode), edgeCodeRight});
+		}
+		else // orientationMatchOther is false, i.e., there are only four neighbor faces
+		{
+			connectedEdges.back().second = nodeCode;
+			connectedEdges.push_back({connectedEdges.front().first.neighborFace(level,edgeCodeRight), nodeCode});
+		}
+	}
+
+
+	return connectedEdges;
+}
+
+void
+SPIRID::sGrid::subGridScanner::reset()
+{
+    for (currentFace = scanFaces.begin(); currentFace != endIterator; ++currentFace)
+    {
+        currentFace -> reset(gridMinLevel);
+    }
+	currentFace = scanFaces.begin();
+}
+SPIRID::sGrid::subGridScanner::subGridScanner(const std::list<sGrid>& faceList, size_t scanLevel, size_t minLevel) :
+    scannerLevel(scanLevel),
+	gridMinLevel(minLevel),
+	scanFaces(faceList),
+	currentFace(scanFaces.begin()),
+	endIterator(scanFaces.end())
+{
+    for (currentFace = scanFaces.begin(); currentFace != endIterator; ++currentFace)
+    {
+        currentFace -> resize(scanLevel);
+        currentFace -> reset(minLevel);
+    }
+	currentFace = scanFaces.begin();
+}
+SPIRID::sGrid::subGridScanner
+SPIRID::sGrid::begin(size_t scanLevel, size_t minLevel) const
+{
+    std::list<sGrid> faces;
+    faces.push_back(*this);
+    return subGridScanner(faces,scanLevel,minLevel);
+}
+bool
+SPIRID::sGrid::subGridScanner::stepToNextFace(size_t gridLevel)
+{
+	if (gridLevel == gridMinLevel)
+	{
+    	if (gridLevel == 0)
+        {
+            if (currentFace->operator[](0) == 7) return false;
+            else
+            {
+                currentFace->set(0,currentFace->operator[](0)+1);
+                return true;
+            }
+        }
+
+		if (currentFace->operator[](gridLevel) == 3) return false;
+		else
+		{
+			currentFace->set(gridLevel,currentFace->operator[](gridLevel)+1);
+			return true;
+		}
+	}
+	else
+	{
+		if (currentFace->operator[](gridLevel) == 3)
+		{
+			currentFace->set(gridLevel,0);
+			return stepToNextFace(gridLevel-1);
+		}
+		else
+		{
+			currentFace->set(gridLevel,currentFace->operator[](gridLevel)+1);
+			return true;
+		}
+	}
+}
+bool
+SPIRID::sGrid::subGridScanner::operator == (const subGridScanner& s2) const
+{
+    if (currentFace == endIterator && s2.currentFace == s2.endIterator) return true;
+    if (currentFace == endIterator || s2.currentFace == s2.endIterator) return false;
+    return *currentFace == *s2.currentFace;
+}
+
+
+
+bool
+SPIRID::sGrid::stepToNextFace(size_t level, size_t startLevel)
+{
+	if (level == 0)
+	{
+		if (at(0) == 7) return false;
+		else
+		{
+			setExtend(0,at(0)+1);
+			return true;
+		}
+	}
+	else if (level == startLevel)
+	{
+		if (at(level) == 3) return false;
+		else
+		{
+			setExtend(level,at(level)+1);
+			return true;
+		}
+	}
+	else
+	{
+		if (at(level) == 3)
+		{
+			setExtend(level,0);
+			return stepToNextFace(level-1,startLevel);
+		}
+		else
+		{
+			setExtend(level,at(level)+1);
+			return true;
 		}
 	}
 }

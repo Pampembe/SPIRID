@@ -14,7 +14,133 @@ using namespace SPIRID;
 
 int main()
 {
+#ifdef DEBUG
+	std::cout << "collecting neighbor faces & nodes for special points: ";
+	std::cout << std::endl;
+	std::list<sGrid> starF = sGrid({0,0,0,1,1,1,1}).nodeNeighborFaces(2,2);
+	std::list<std::pair<sGrid, unsigned short> > starN = sGrid({0,0,0,1,1,1,1}).nodeNeighborNodes(2,2);
+	std::list<std::pair<sGrid, unsigned short> > starE = sGrid({0,0,0,1,1,1,1}).nodeConnectedEdges(2,2);
+	std::list<std::pair<sGrid, unsigned short> > starO = sGrid({0,0,0,1,1,1,1}).nodeOuterRingEdges(2,2);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	starF = sGrid({0,0,0,1,1,1,1}).nodeNeighborFaces(2,3);
+	starN = sGrid({0,0,0,1,1,1,1}).nodeNeighborNodes(2,3);
+	starE = sGrid({0,0,0,1,1,1,1}).nodeConnectedEdges(2,3);
+	starO = sGrid({0,0,0,1,1,1,1}).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	starF = sGrid({0,0,0,0,0,0,1}).nodeNeighborFaces(2,3);
+	starN = sGrid({0,0,0,0,0,0,1}).nodeNeighborNodes(2,3);
+	starE = sGrid({0,0,0,0,0,0,1}).nodeConnectedEdges(2,3);
+	starO = sGrid({0,0,0,0,0,0,1}).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	starF = sGrid({0,0,0,0,0,0,1}).nodeNeighborFaces(2,2);
+	starN = sGrid({0,0,0,0,0,0,1}).nodeNeighborNodes(2,2);
+	starE = sGrid({0,0,0,0,0,0,1}).nodeConnectedEdges(2,2);
+	starO = sGrid({0,0,0,0,0,0,1}).nodeOuterRingEdges(2,2);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	starF = sGrid({0,0,0,1,0,1,1}).nodeNeighborFaces(2,1);
+	starN = sGrid({0,0,0,1,0,1,1}).nodeNeighborNodes(2,1);
+	starE = sGrid({0,0,0,1,0,1,1}).nodeConnectedEdges(2,1);
+	starO = sGrid({0,0,0,1,0,1,1}).nodeOuterRingEdges(2,1);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	starF = sGrid({0,0,0,1,0,1,1}).nodeNeighborFaces(2,3);
+	starN = sGrid({0,0,0,1,0,1,1}).nodeNeighborNodes(2,3);
+	starE = sGrid({0,0,0,1,0,1,1}).nodeConnectedEdges(2,3);
+	starO = sGrid({0,0,0,1,0,1,1}).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	starF = sGrid({0,0,0,0,0,1,1}).nodeNeighborFaces(2,3);
+	starN = sGrid({0,0,0,0,0,1,1}).nodeNeighborNodes(2,3);
+	starE = sGrid({0,0,0,0,0,1,1}).nodeConnectedEdges(2,3);
+	starO = sGrid({0,0,0,0,0,1,1}).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Connected Edges :         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starE.begin(); it != starE.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Outer Ring Edges:         ";
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starO.begin(); it != starO.end(); ++it) std::cout << it->first << it->second << " ";
+	std::cout << std::endl;
+	std::cout << "Faces           :         ";
+	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
+	std::cout << std::endl;
+
+	std::cout << std::endl;
+#endif //DEBUG
+
 	angle::unitPi();
+
 	/*
 		std::cout << "Polar coordinates of special points in high grid level:" << std::endl;
 		sGrid p0(5);
@@ -286,7 +412,7 @@ int main()
 	}
 
 	scaledFP minValue = sGrid::test(level,TMP,3);
-	bool hasNextNode = TMP.stepToNextSGrid(level,fullSearchLevel);
+	bool hasNextNode = TMP.stepToNextFace(level,fullSearchLevel);
 //    scaledFP dummy = sGrid::test(level,TMP,0);
 //    if (dummy < minValue) minValue = dummy;
 	scaledFP dummy = sGrid::test(level,TMP,1);
@@ -309,7 +435,7 @@ int main()
 	};
 	while (hasNextNode)
 	{
-		hasNextNode = TMP.stepToNextSGrid(level,fullSearchLevel);
+		hasNextNode = TMP.stepToNextFace(level,fullSearchLevel);
 //        dummy = sGrid::test(level,TMP,0);
 //        if (dummy < minValue) minValue = dummy;
 		dummy = sGrid::test(level,TMP,1);

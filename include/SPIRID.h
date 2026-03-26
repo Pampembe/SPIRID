@@ -174,7 +174,6 @@ public:
 	//standard constructors
 	inline sGrid(size_t depth = 0) : gridCode(2*depth+3) {};
 	inline sGrid(const sGrid& P) : gridCode(P.gridCode) {};
-	sGrid(const std::vector<bool>& P);
 
 	/*  A face is represented by a gridCode with depth+1 digits:
 	        1st digit (0..7): grid level 0, identifies the octant of the sphere
@@ -183,6 +182,11 @@ public:
 	    A gridCode of depth D also represents D faces with smaller depths through truncation of the last digits
 	    A gridCode of depth D also represents infinitly many faces with higher grid levels through appending zeros after digit D+1
 	*/
+	sGrid(const std::vector<unsigned short>& faceCodes);
+    //internally we represent all faceCodes through a single bit array
+	sGrid(const std::vector<bool>& bitCode);
+
+
 	//depth of the gridCode & resize
 	inline size_t depth() const {
 		return (gridCode.size()-3)/2; //internally gridCode is a vector<bool> gridCode of length 3+2*depth --> make sure gridCode.size() always >=3
@@ -190,25 +194,87 @@ public:
 	inline void resize(size_t newDepth) {
 		gridCode.resize(3+2*newDepth);
 	};
+
+
 	//get & set face code: (0..7) at level 0, (0..3) at other levels
 	unsigned short at(size_t level) const;
 	const sGrid& setExtend(size_t level, unsigned short faceCode);
+	//set all face codes in level and above to zero
+	const sGrid& reset(size_t level);
 
-	//stepping through the grid at a certain level
-	sGrid neighborFace(size_t level, unsigned short edgeCode) const
+
+    //comparison operators
+	inline bool operator == (const sGrid& P) const
 	{
-		sGrid neighbor(*this);
-		neighbor.resize(level);
-		bool orientationMatch = true;
-		return assignNeighborFace(level, edgeCode, neighbor, orientationMatch);
+	    return gridCode == P.gridCode;
 	};
+	inline bool operator != (const sGrid& P) const
+	{
+	    return !(operator == (P));
+	}
 
+
+	//stepping through the grid by searching for neighbors
+	sGrid neighborFace(size_t level, unsigned short edgeCode) const;
+    //includes check whether neighbor face has the same orientation
+	sGrid neighborFace(size_t level, unsigned short edgeCode, bool& orientationMatch) const;
+	std::list<sGrid> neighborFaces(size_t level) const;
+	std::list<sGrid> edgeNeighborFaces(size_t level, unsigned short edgeCode) const;
+	std::list<sGrid> nodeNeighborFaces(size_t level, unsigned short nodeCode) const;
+	std::list<std::pair<sGrid, unsigned short> > nodeNeighborNodes(size_t level, unsigned short nodeCode) const;
+	std::list<std::pair<sGrid, unsigned short> > nodeConnectedEdges(size_t level, unsigned short nodeCode) const;
+	std::list<std::pair<sGrid, unsigned short> > nodeOuterRingEdges(size_t level, unsigned short nodeCode) const;
+
+
+
+    // iterators can be used to scan through all sub-faces at iteratorLevel in a given list of faces at faceLevel
+	class subGridScanner
+	{
+		const size_t scannerLevel;
+		const size_t gridMinLevel;
+
+		std::list<sGrid> scanFaces;
+		std::list<sGrid>::iterator currentFace;
+		const std::list<sGrid>::iterator endIterator;
+
+    	inline bool stepToNextFace()
+    	{
+    	    return stepToNextFace(scannerLevel);
+    	};
+    	bool stepToNextFace(size_t gridLevel);
+
+	public:
+		subGridScanner(const std::list<sGrid>&, size_t scanLevel, size_t minLevel = 1);
+		void reset();
+
+		inline subGridScanner& operator ++()
+		{
+		    if (!stepToNextFace()) ++currentFace;
+		    return *this;
+		};
+		bool operator == (const subGridScanner& s2) const;
+		inline bool operator != (const subGridScanner& s2) const
+        {
+            return !(operator == (s2));
+        };
+	};
+	inline subGridScanner begin() const
+	{
+	    return begin(depth(),1);
+	}
+	subGridScanner begin(size_t scanLevel, size_t minLevel = 1) const;
+	subGridScanner end() const;
+//private:
+	//stepping through the grid at level by incrementing gridCode until the last code in startLevel is reached
+	bool stepToNextFace(size_t level, size_t startLevel = 0);
+
+public:
 	/* Each point at every grid level corresponds to a
 	   face (faceCodes 0..3) with edges and nodes (codes 1..3).
 	   We can calculate edge lengths, interior angles and area for that face.
 	*/
 	//calculate the area of a face
-	angle area(size_t level) const
+	inline angle area(size_t level) const
 	{
 		return area(level, calcFaceGeometry(level));
 	};
@@ -264,40 +330,6 @@ public:
 
 
 
-	bool stepToNextSGrid(size_t level, size_t startLevel = 0)
-	{
-		if (level == 0)
-		{
-			if (at(0) == 7) return false;
-			else
-			{
-				setExtend(0,at(0)+1);
-				return true;
-			}
-		}
-		else if (level == startLevel)
-		{
-			if (at(level) == 3) return false;
-			else
-			{
-				setExtend(level,at(level)+1);
-				return true;
-			}
-		}
-		else
-		{
-			if (at(level) == 3)
-			{
-				setExtend(level,0);
-				return stepToNextSGrid(level-1,startLevel);
-			}
-			else
-			{
-				setExtend(level,at(level)+1);
-				return true;
-			}
-		}
-	}
 
 
 	/* special points on the sphere */
