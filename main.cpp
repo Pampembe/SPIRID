@@ -396,8 +396,8 @@ int main()
 	X.setExtend(6,3);
 	std::cout << X << X.neighborFace(6,1) << X.neighborFace(6,2) << X.neighborFace(6,3) << std::endl;
 
-	size_t level = 14;
-	size_t fullSearchLevel = 9;
+	size_t level = 30;
+	size_t fullSearchLevel = 25;
 
 	funcGraphPoint<> F(sGrid::searchMinPoint(level,SPIRID::sGrid::test));
 	std::cout << F.dPoint.first << F.dPoint.second << ": " << F.fValue << " - " << F.dPoint.first.toPolar(level,F.dPoint.second) << std::endl;
@@ -406,7 +406,11 @@ int main()
 	sGrid TMP(F.dPoint.first);
 	sGrid TMP2(F.dPoint.first);
 	unsigned short loc2 = 3;
-	for (size_t it = fullSearchLevel; it <= level; it++)
+
+	scaledFP minValue = sGrid::test(level,TMP,3);
+	scaledFP dummy = sGrid::test(level,TMP,1);
+/*
+    for (size_t it = fullSearchLevel; it <= level; it++)
 	{
 		TMP.setExtend(it,0);
 	}
@@ -458,6 +462,46 @@ int main()
 		};
 	}
 	std::cout << TMP2 << loc2 << " minValue: " << minValue << std::endl;
+*/
+
+	minValue = sGrid::test(level,TMP,3);
+	sGrid::subGridScanner sTMP(TMP.begin(level,fullSearchLevel));
+	while (sTMP != TMP.end())
+	{
+		dummy = sGrid::test(level,*sTMP,1);
+		if (dummy < minValue) {
+			minValue = dummy;
+			TMP2=*sTMP;
+			loc2=1;
+		};
+		dummy = sGrid::test(level,*sTMP,2);
+		if (dummy < minValue) {
+			minValue = dummy;
+			TMP2=*sTMP;
+			loc2=2;
+		};
+		dummy = sGrid::test(level,*sTMP,3);
+		if (dummy < minValue) {
+			minValue = dummy;
+			TMP2=*sTMP;
+			loc2=3;
+		};
+		++sTMP;
+	}
+	std::cout << TMP2 << loc2 << " minValue: " << minValue << std::endl;
+	std::cout << TMP2 << 1 << " Value: " << sGrid::test(30,TMP2,1) << std::endl;
+	std::cout << TMP2 << 2 << " Value: " << sGrid::test(30,TMP2,2) << std::endl;
+	std::cout << TMP2 << 3 << " Value: " << sGrid::test(30,TMP2,3) << std::endl;
+	std::cout << std::endl;
+	std::cout << TMP2.neighborFace(30,1) << 1 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,1),1) << std::endl;
+	std::cout << TMP2.neighborFace(30,1) << 2 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,1),2) << std::endl;
+	std::cout << TMP2.neighborFace(30,1) << 3 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,1),3) << std::endl;
+	std::cout << TMP2.neighborFace(30,2) << 1 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,2),1) << std::endl;
+	std::cout << TMP2.neighborFace(30,2) << 2 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,2),2) << std::endl;
+	std::cout << TMP2.neighborFace(30,2) << 3 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,2),3) << std::endl;
+	std::cout << TMP2.neighborFace(30,3) << 1 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,3),1) << std::endl;
+	std::cout << TMP2.neighborFace(30,3) << 2 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,3),2) << std::endl;
+	std::cout << TMP2.neighborFace(30,3) << 3 << " Value: " << sGrid::test(30,TMP2.neighborFace(30,3),3) << std::endl;
 
 	return 0;
 }

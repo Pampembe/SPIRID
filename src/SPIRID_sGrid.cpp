@@ -2,32 +2,6 @@
 #include <limits>
 #include <SPIRID.h>
 
-//accuracy settings
-size_t SPIRID::sGrid::accuracyBits       = std::numeric_limits<fp_type>::digits;
-size_t SPIRID::sGrid::minDepthFlatApprox = SPIRID::sGrid::accuracyBits/2+1;
-size_t SPIRID::sGrid::minScaleSinXToX    = SPIRID::sGrid::accuracyBits/3+1;
-void SPIRID::sGrid::setAccuracyBits(size_t bitCount)
-{
-	if (bitCount>std::numeric_limits<fp_type>::digits)
-	{
-		std::cerr << "warning: floating point type supports only " << std::numeric_limits<fp_type>::digits << " binary digits." << std::endl;
-		bitCount = std::numeric_limits<fp_type>::digits;
-	}
-	SPIRID::sGrid::accuracyBits = bitCount;
-	SPIRID::sGrid::minDepthFlatApprox = SPIRID::sGrid::accuracyBits/2+1;
-	SPIRID::sGrid::minScaleSinXToX    = SPIRID::sGrid::accuracyBits/3+1;
-}
-
-
-
-//special points
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::NorthOct0 = {SPIRID::sGrid(std::vector<bool>({0,0,0})),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),2};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::SouthOct7 = {SPIRID::sGrid(std::vector<bool>({1,1,1})),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),2};
-
-
-
 //sGrid constructors
 SPIRID::sGrid::sGrid(const std::vector<bool>& bitCode) : gridCode(bitCode)
 {
@@ -37,39 +11,42 @@ SPIRID::sGrid::sGrid(const std::vector<bool>& bitCode) : gridCode(bitCode)
 }
 SPIRID::sGrid::sGrid(const std::vector<unsigned short>& faceCodes) : gridCode(1+2*faceCodes.size())
 {
-    for (size_t it = 0; it <= faceCodes.size(); ++it)
-    {
-        set(it, faceCodes[it]);
-    }
+	for (size_t it = 0; it <= faceCodes.size(); ++it)
+	{
+		set(it, faceCodes[it]);
+	}
 }
 
-
-
 //get faceCode at a certain level
-unsigned short SPIRID::sGrid::at(size_t level) const
+unsigned short
+SPIRID::sGrid::at(size_t level) const
 {
 	if (2*level+3>gridCode.size()) return 0;
 	else return operator [] (level);
 };
-unsigned short SPIRID::sGrid::operator [] (size_t level) const
+unsigned short
+SPIRID::sGrid::operator [] (size_t level) const
 {
 	if (level==0) return gridCode[0]+2*gridCode[1]+4*gridCode[2];
 	return gridCode[2*level+1]+2*gridCode[2*level+2];
 };
 //set faceCode at a certain level
-const SPIRID::sGrid& SPIRID::sGrid::setExtend(size_t level, unsigned short faceCode)
+const SPIRID::sGrid&
+SPIRID::sGrid::setExtend(size_t level, unsigned short faceCode)
 {
 	if (2*level+3>gridCode.size()) gridCode.resize(2*level+3);
 	return set(level, faceCode);
 }
-const SPIRID::sGrid& SPIRID::sGrid::reset(size_t level)
+const SPIRID::sGrid&
+SPIRID::sGrid::reset(size_t level)
 {
-    size_t start = 2*level+1;
-    if (level == 0) start = 0;
-    std::fill(gridCode.begin()+start, gridCode.end(), false);
-    return *this;
+	size_t start = 2*level+1;
+	if (level == 0) start = 0;
+	std::fill(gridCode.begin()+start, gridCode.end(), false);
+	return *this;
 }
-const SPIRID::sGrid& SPIRID::sGrid::set(size_t level, unsigned short faceCode)
+const SPIRID::sGrid&
+SPIRID::sGrid::set(size_t level, unsigned short faceCode)
 {
 	if (level==0)
 	{
@@ -163,6 +140,34 @@ const SPIRID::sGrid& SPIRID::sGrid::set(size_t level, unsigned short faceCode)
 		}
 	}
 }
+
+//special points
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::NorthOct0 = {SPIRID::sGrid(std::vector<bool>({0,0,0})),3};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::SouthOct7 = {SPIRID::sGrid(std::vector<bool>({1,1,1})),3};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),2};
+
+
+
+//accuracy settings
+size_t SPIRID::sGrid::accuracyBits       = std::numeric_limits<fp_type>::digits;
+size_t SPIRID::sGrid::minDepthFlatApprox = SPIRID::sGrid::accuracyBits/2+1;
+size_t SPIRID::sGrid::minScaleSinXToX    = SPIRID::sGrid::accuracyBits/3+1;
+void SPIRID::sGrid::setAccuracyBits(size_t bitCount)
+{
+	if (bitCount>std::numeric_limits<fp_type>::digits)
+	{
+		std::cerr << "warning: floating point type supports only " << std::numeric_limits<fp_type>::digits << " binary digits." << std::endl;
+		bitCount = std::numeric_limits<fp_type>::digits;
+	}
+	SPIRID::sGrid::accuracyBits = bitCount;
+	SPIRID::sGrid::minDepthFlatApprox = SPIRID::sGrid::accuracyBits/2+1;
+	SPIRID::sGrid::minScaleSinXToX    = SPIRID::sGrid::accuracyBits/3+1;
+}
+
+
+
+
 
 
 SPIRID::sGrid
@@ -435,47 +440,67 @@ SPIRID::sGrid::nodeOuterRingEdges(size_t level, unsigned short nodeCode) const
 void
 SPIRID::sGrid::subGridScanner::reset()
 {
-    for (currentFace = scanFaces.begin(); currentFace != endIterator; ++currentFace)
-    {
-        currentFace -> reset(gridMinLevel);
-    }
+	for (currentFace = scanFaces.begin(); currentFace != endIterator; ++currentFace)
+	{
+		currentFace -> reset(gridMinLevel);
+	}
 	currentFace = scanFaces.begin();
 }
 SPIRID::sGrid::subGridScanner::subGridScanner(const std::list<sGrid>& faceList, size_t scanLevel, size_t minLevel) :
-    scannerLevel(scanLevel),
+	scannerLevel(scanLevel),
 	gridMinLevel(minLevel),
 	scanFaces(faceList),
 	currentFace(scanFaces.begin()),
 	endIterator(scanFaces.end())
 {
-    for (currentFace = scanFaces.begin(); currentFace != endIterator; ++currentFace)
-    {
-        currentFace -> resize(scanLevel);
-        currentFace -> reset(minLevel);
-    }
+	for (currentFace = scanFaces.begin(); currentFace != endIterator; ++currentFace)
+	{
+		currentFace -> resize(scanLevel);
+		currentFace -> reset(minLevel);
+	}
 	currentFace = scanFaces.begin();
 }
+SPIRID::sGrid::subGridScanner&
+SPIRID::sGrid::subGridScanner::operator = (const subGridScanner& X)
+{
+	scannerLevel = X.scannerLevel;
+	gridMinLevel = X.gridMinLevel;
+	scanFaces = X.scanFaces;
+	currentFace = scanFaces.begin();
+	endIterator = scanFaces.end();
+	reset();
+	return *this;
+}
+
 SPIRID::sGrid::subGridScanner
 SPIRID::sGrid::begin(size_t scanLevel, size_t minLevel) const
 {
-    std::list<sGrid> faces;
-    faces.push_back(*this);
-    return subGridScanner(faces,scanLevel,minLevel);
+	std::list<sGrid> faces;
+	faces.push_back(*this);
+	return subGridScanner(faces,scanLevel,minLevel);
+}
+SPIRID::sGrid::subGridScanner
+SPIRID::sGrid::end() const
+{
+	std::list<sGrid> faces;
+	subGridScanner s(faces,0,1);
+	return s;
 }
 bool
 SPIRID::sGrid::subGridScanner::stepToNextFace(size_t gridLevel)
 {
+	if (gridLevel < gridMinLevel) return false;
 	if (gridLevel == gridMinLevel)
 	{
-    	if (gridLevel == 0)
-        {
-            if (currentFace->operator[](0) == 7) return false;
-            else
-            {
-                currentFace->set(0,currentFace->operator[](0)+1);
-                return true;
-            }
-        }
+		if (gridLevel == 0)
+		{
+			if (currentFace->operator[](0) == 7) return false;
+			else
+			{
+				currentFace->set(0,currentFace->operator[](0)+1);
+				return true;
+			}
+		}
 
 		if (currentFace->operator[](gridLevel) == 3) return false;
 		else
@@ -501,653 +526,21 @@ SPIRID::sGrid::subGridScanner::stepToNextFace(size_t gridLevel)
 bool
 SPIRID::sGrid::subGridScanner::operator == (const subGridScanner& s2) const
 {
-    if (currentFace == endIterator && s2.currentFace == s2.endIterator) return true;
-    if (currentFace == endIterator || s2.currentFace == s2.endIterator) return false;
-    return *currentFace == *s2.currentFace;
+	if (currentFace == endIterator && s2.currentFace == s2.endIterator) return true;
+	if (currentFace == endIterator || s2.currentFace == s2.endIterator) return false;
+	return *currentFace == *s2.currentFace;
 }
 
 
 
-bool
-SPIRID::sGrid::stepToNextFace(size_t level, size_t startLevel)
-{
-	if (level == 0)
-	{
-		if (at(0) == 7) return false;
-		else
-		{
-			setExtend(0,at(0)+1);
-			return true;
-		}
-	}
-	else if (level == startLevel)
-	{
-		if (at(level) == 3) return false;
-		else
-		{
-			setExtend(level,at(level)+1);
-			return true;
-		}
-	}
-	else
-	{
-		if (at(level) == 3)
-		{
-			setExtend(level,0);
-			return stepToNextFace(level-1,startLevel);
-		}
-		else
-		{
-			setExtend(level,at(level)+1);
-			return true;
-		}
-	}
-}
 
 
 
-//calculate geometry (scaled edge lengths) of the face
-SPIRID::sGrid::faceGeometry SPIRID::sGrid::calcFaceGeometry(size_t level) const
-{
-	//edge length a as SinaSq = 2^(2*level)*Sin(a)^2 --> level 0: a=Pi/2, SinaSq=1; level 1, a=Pi/4: SinaSq=2
-	faceGeometry faceGeom({1,1,1});
-	size_t max_level_it = std::min(level,minDepthFlatApprox);
-	unsigned short fCode;
-
-	for (size_t level_it=0; level_it<max_level_it; level_it++)
-	{
-		fCode = at(level_it+1);
-		stepupFaceGeometryFrom(level_it, fCode, faceGeom);
-	};
-	return faceGeom;
-}
-//update geometry (scaled edge lengths) of a face: step-up to the next grid level
-void SPIRID::sGrid::stepupFaceGeometryFrom(size_t level, unsigned short fCode, faceGeometry& faceGeom)
-{
-	scaleExp_type scale = 2*level;
-
-	fp_type SinaSq = faceGeom.SinSqE[0];
-	fp_type SinbSq = faceGeom.SinSqE[1];
-	fp_type SincSq = faceGeom.SinSqE[2];
-
-	fp_type ScaledSina2Sq = calcEdgeBisection(scale,SinaSq);
-	fp_type ScaledSinb2Sq = calcEdgeBisection(scale,SinbSq);
-	fp_type ScaledSinc2Sq = calcEdgeBisection(scale,SincSq);
-
-	switch (fCode)
-	{
-	case 0 :
-	{
-		faceGeom.SinSqE[0] = (        2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) - 2)
-		                              - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq + ScaledSinc2Sq,-scale) - 6)
-		                              + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq)
-		                     )/
-		                     ((LDEXP(ScaledSinb2Sq,-scale) - 4)*(LDEXP(ScaledSinc2Sq,-scale) - 4));
-		faceGeom.SinSqE[1] = (   - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scale) + 2)
-		                         - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) - 6)
-		                         + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq))/
-		                     ((LDEXP(ScaledSina2Sq,-scale) - 4)*(LDEXP(ScaledSinc2Sq,-scale) - 4));
-		faceGeom.SinSqE[2] = (      2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scale) - 2)
-		                            - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) + 2)
-		                            + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/
-		                     ((LDEXP(ScaledSina2Sq,-scale) - 4)*(LDEXP(ScaledSinb2Sq,-scale) - 4));
-		break;
-	}
-	case 1 :
-	{
-		// 4*SinmaSq == (2*ScaledSinb2Sq*(-2 + ScaledSinc2Sq) - 2*ScaledSina2Sq*(-6 + ScaledSinb2Sq + ScaledSinc2Sq) + 4*(-ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/((-4 + ScaledSinb2Sq)*(-4 + ScaledSinc2Sq))
-		faceGeom.SinSqE[0] = (        2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) - 2)
-		                              - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq + ScaledSinc2Sq,-scale) - 6)
-		                              + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq)
-		                     )/
-		                     ((LDEXP(ScaledSinb2Sq,-scale) - 4)*(LDEXP(ScaledSinc2Sq,-scale) - 4));
-		faceGeom.SinSqE[1] = ScaledSinb2Sq;
-		faceGeom.SinSqE[2] = ScaledSinc2Sq;
-		break;
-	}
-	case 2 :
-	{
-		faceGeom.SinSqE[0] = ScaledSina2Sq;
-		// 4*SinmbSq == (-2*ScaledSina2Sq*(2 + ScaledSinb2Sq - ScaledSinc2Sq) - 2*ScaledSinb2Sq*(-6 + ScaledSinc2Sq) + 4*(-ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/((-4 + ScaledSina2Sq)*(-4 + ScaledSinc2Sq))
-		faceGeom.SinSqE[1] = (   - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scale) + 2)
-		                         - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) - 6)
-		                         + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq))/
-		                     ((LDEXP(ScaledSina2Sq,-scale) - 4)*(LDEXP(ScaledSinc2Sq,-scale) - 4));
-		faceGeom.SinSqE[2] = ScaledSinc2Sq;
-		break;
-	}
-	case 3 :
-	{
-		// 4*SinmcSq == (2*ScaledSina2Sq*(-2 + ScaledSinb2Sq - ScaledSinc2Sq) - 2*ScaledSinb2Sq*(2 + ScaledSinc2Sq) + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/((-4 + ScaledSina2Sq)*(-4 + ScaledSinb2Sq))
-		faceGeom.SinSqE[0] = ScaledSina2Sq;
-		faceGeom.SinSqE[1] = ScaledSinb2Sq;
-		faceGeom.SinSqE[2] = (      2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scale) - 2)
-		                            - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) + 2)
-		                            + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/
-		                     ((LDEXP(ScaledSina2Sq,-scale) - 4)*(LDEXP(ScaledSinb2Sq,-scale) - 4));
-		break;
-	}
-	default: // defaul is 0
-	{
-		faceGeom.SinSqE[0] = 0;
-		faceGeom.SinSqE[1] = 0;
-		faceGeom.SinSqE[2] = 0;
-		break;
-	}
-	}
-}
 
 
 
-//calculate length of one edge of a face
-SPIRID::angle SPIRID::sGrid::edgeLength(size_t level, unsigned short edgeCode) const
-{
-	faceGeometry faceGeom(calcFaceGeometry(level));
-
-	if (level>=minScaleSinXToX) return angle(SQRT(faceGeom.SinSqE[edgeCode-1]),level);
-	return angle(ASIN(LDEXP(SQRT(faceGeom.SinSqE[edgeCode-1]),-level)),0);
-}
-//calculate interior angle of a face at a single node
-fp_type SPIRID::sGrid::interiorAngle(size_t level, unsigned short nodeCode, const faceGeometry& faceGeom)
-{
-	fp_type SinaSq,SinbSq,SincSq;
-	switch (nodeCode)
-	{
-	case 1:
-	{
-		SinaSq = faceGeom.SinSqE[0];
-		SinbSq = faceGeom.SinSqE[1];
-		SincSq = faceGeom.SinSqE[2];
-		break;
-	}
-	case 2:
-	{
-		SinaSq = faceGeom.SinSqE[1];
-		SinbSq = faceGeom.SinSqE[0];
-		SincSq = faceGeom.SinSqE[2];
-		break;
-	}
-	case 3:
-	{
-		SinaSq = faceGeom.SinSqE[2];
-		SinbSq = faceGeom.SinSqE[0];
-		SincSq = faceGeom.SinSqE[1];
-		break;
-	}
-	default:
-	{
-		return 0;
-		break;
-	}
-	}
-
-	if (level>=SPIRID::sGrid::minDepthFlatApprox)
-	{
-		return ACOS((SinbSq+SincSq-SinaSq)/(SQRT(SinbSq*SincSq)*2));
-	}
-
-	return interiorAngle(2*level,SinbSq,SincSq,SinaSq);
-}
-//calculate interior angle of geometry
-fp_type SPIRID::sGrid::interiorAngle(scaleExp_type scale, fp_type SinbSq, fp_type SincSq, fp_type SinaSq)
-{
-	fp_type ScaledSina2Sq = calcEdgeBisection(scale, SinaSq);
-	fp_type ScaledSinb2Sq = calcEdgeBisection(scale, SinbSq);
-	fp_type ScaledSinc2Sq = calcEdgeBisection(scale, SincSq);
-
-	return ACOS( (2*ScaledSinc2Sq - 2*ScaledSina2Sq - ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scale) - 2) ) /
-	             (4*SQRT(SinbSq*SincSq)) );
-}
-SPIRID::angle SPIRID::sGrid::area(size_t level, const faceGeometry& faceGeom)
-{
-	scaleExp_type scaleSq = 2*level;
-
-	fp_type FourSinE1HalfSq = calcEdgeBisection(scaleSq,faceGeom.SinSqE[0]);
-	fp_type FourSinE2HalfSq = calcEdgeBisection(scaleSq,faceGeom.SinSqE[1]);
-	fp_type FourSinE3HalfSq = calcEdgeBisection(scaleSq,faceGeom.SinSqE[2]);
-
-	if (scaleSq>=minScaleSinXToX)
-	{
-		return angle(LDEXP(SQRT(sinSqQuarterArea(level, FourSinE1HalfSq, FourSinE2HalfSq, FourSinE3HalfSq)),2),scaleSq);
-	}
-	return angle(LDEXP(ASIN(LDEXP(SQRT(sinSqQuarterArea(level, FourSinE1HalfSq, FourSinE2HalfSq, FourSinE3HalfSq)),-scaleSq)),scaleSq+2),scaleSq);
-}
-fp_type
-SPIRID::sGrid::sinSqQuarterArea(size_t level,
-                                fp_type FourSinE1HalfSq,
-                                fp_type FourSinE2HalfSq,
-                                fp_type FourSinE3HalfSq)
-{
-	/* Area of a spherical triangle:
-	    tan(area/4) = sqrt( tan(s/2)*tan((s-a)/2)*tan((s-b)/2)*tan((s-c)/2) )
-	    where s=(a+b+c)/2
-
-	   By trigonometric formulas this becomes
-	    sin(area/4)^2 = [(sin(a/4)^2+sin(b/4)^2+sin(c/4)^2)^2
-	                    - 2*(sin(a/4)^4+sin(b/4)^4+sin(c/4)^4)
-	                    - 4*sin(a/4)^2*sin(b/4)^2*sin(c/4)^2] /
-	                    [(1-2*sin(a/4)^2) * (1-2*sin(b/4)^2) * (1-2*sin(c/4)^2)]
-	*/
-	//Input values are already given as 4*Sin(e/2)^2. Thus, these values need to be scaled with one level higher.
-	scaleExp_type scaleSq = 2*(level+1);
-	//calculate 16*Sin(e/4)^2
-	fp_type ScaledSinSqQuarterA = calcEdgeBisection(scaleSq,FourSinE1HalfSq);
-	fp_type ScaledSinSqQuarterB = calcEdgeBisection(scaleSq,FourSinE2HalfSq);
-	fp_type ScaledSinSqQuarterC = calcEdgeBisection(scaleSq,FourSinE3HalfSq);
-
-	fp_type sum = (ScaledSinSqQuarterA+ScaledSinSqQuarterB+ScaledSinSqQuarterC); //scale: 16*2^(2*level) == 2^(scaleSq+2)
-
-	return LDEXP( (sum*sum //scale: 16^2 * 2^(4*level) == 2^(4*(level+2))
-	               - 2*( ScaledSinSqQuarterA*ScaledSinSqQuarterA
-	                     +ScaledSinSqQuarterB*ScaledSinSqQuarterB
-	                     +ScaledSinSqQuarterC*ScaledSinSqQuarterC )
-	               - LDEXP(ScaledSinSqQuarterA*ScaledSinSqQuarterB*ScaledSinSqQuarterC,-scaleSq) // 4*term with scaleSq+2 == term with scaleSq
-	              ) /
-	              ( ( 1 - LDEXP(ScaledSinSqQuarterA,-scaleSq-1))
-	                *(1 - LDEXP(ScaledSinSqQuarterB,-scaleSq-1))
-	                *(1 - LDEXP(ScaledSinSqQuarterC,-scaleSq-1))
-	              ), -8);
-}
 
 
-
-//for a particular sGrid point: calculate angle and scaled distance to a particular node
-SPIRID::sGrid::inFacePolar
-SPIRID::sGrid::calcFacePolar(
-    size_t refNodeLevel, // gridlevel of the node and edge
-    unsigned short nodeCode, // node of the face to consider for distance
-    unsigned short edgeCode, // edge of the face to consider for angle
-    size_t pointLevel, // gridlevel of the grid point for angle and distance calculation
-    unsigned short location // location==0: crossing point of side bisections; location==1,2,3: a node
-) const
-{
-	if (pointLevel<refNodeLevel) return {0,0};
-
-	return calcFacePolar(refNodeLevel, nodeCode, edgeCode,
-	                     calcFaceGeometry(refNodeLevel),
-	                     std::min(pointLevel, refNodeLevel+accuracyBits),
-	                     location);
-}
-//for a point (pointLevel, location): calculate angle and scaled distance to a particular node
-SPIRID::sGrid::inFacePolar
-SPIRID::sGrid::calcFacePolar(
-    size_t refNodeLevel, // gridlevel of the reference node
-    unsigned short nodeCode, // node of the face to consider for distance
-    unsigned short edgeCode, // edge of the face to consider for angle
-    const faceGeometry& faceGeom, // scaled edge lengths of the face
-    size_t pointLevel, // gridlevel of the grid point for angle and distance calculation
-    unsigned short location // location==0: crossing point of side bisections; location==1,2,3: a node
-) const
-{
-	if (refNodeLevel>=minDepthFlatApprox) return calcFlatFacePolar(refNodeLevel, nodeCode, edgeCode, faceGeom, pointLevel, location);
-	if (refNodeLevel==pointLevel)
-	{
-		fp_type SinaSq, SinbSq, SincSq;
-		//assign edge lengths and check that nodeCode and edgeCode have allowed values
-		if (nodeCode == 1)
-		{
-			if (edgeCode == 2)
-			{
-				SinaSq = faceGeom.SinSqE[1];
-				SinbSq = faceGeom.SinSqE[2];
-				SincSq = faceGeom.SinSqE[0];
-			}
-			else if (edgeCode == 3)
-			{
-				SinaSq = faceGeom.SinSqE[2];
-				SinbSq = faceGeom.SinSqE[1];
-				SincSq = faceGeom.SinSqE[0];
-			}
-			else return {0,0};
-		}
-		else if (nodeCode == 2)
-		{
-			if (edgeCode == 1)
-			{
-				SinaSq = faceGeom.SinSqE[0];
-				SinbSq = faceGeom.SinSqE[2];
-				SincSq = faceGeom.SinSqE[1];
-			}
-			else if (edgeCode == 3)
-			{
-				SinaSq = faceGeom.SinSqE[2];
-				SinbSq = faceGeom.SinSqE[0];
-				SincSq = faceGeom.SinSqE[1];
-			}
-			else return {0,0};
-		}
-		else if (nodeCode == 3)
-		{
-			if (edgeCode == 1)
-			{
-				SinaSq = faceGeom.SinSqE[0];
-				SinbSq = faceGeom.SinSqE[1];
-				SincSq = faceGeom.SinSqE[2];
-			}
-			else if (edgeCode == 2)
-			{
-				SinaSq = faceGeom.SinSqE[1];
-				SinbSq = faceGeom.SinSqE[0];
-				SincSq = faceGeom.SinSqE[2];
-			}
-			else return {0,0};
-		}
-		else return {0,0};
-
-		//if location == nodeCode then distance is 0 and we define gamma=0
-		fp_type SindSq = 0;
-		fp_type gammasca = 0;
-		if (location == 0) // point is at the intersection of side bisection lines
-		{
-			scaleExp_type refScale = 2*refNodeLevel;
-
-			fp_type ScaledSina2Sq = calcEdgeBisection(refScale, SinaSq);
-			fp_type ScaledSinb2Sq = calcEdgeBisection(refScale, SinbSq);
-			fp_type ScaledSinc2Sq = calcEdgeBisection(refScale, SincSq);
-
-			//SindcSq == (ScaledSina2Sq*(-2 + ScaledSinb2Sq) - 2*(ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq))/(2.*(-9 + ScaledSina2Sq + ScaledSinb2Sq + ScaledSinc2Sq))
-			SindSq = (      ScaledSina2Sq*(LDEXP(ScaledSinb2Sq,-refScale) - 2)
-			                - (ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq)*2)/
-			         ((LDEXP(ScaledSina2Sq + ScaledSinb2Sq + ScaledSinc2Sq,-refScale) - 9)*2);
-
-			//Cosgammasca == SQRT(Power(ScaledSina2Sq*(-2 + ScaledSinb2Sq) - 2*(ScaledSinb2Sq - ScaledSinc2Sq + 2*SinaSq),2)/(-2*ScaledSina2Sq*(-2 + ScaledSinb2Sq)*SinaSq + 4*SinaSq*(ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq)))/2.
-			gammasca = ACOS( ( 2*(ScaledSinb2Sq - ScaledSinc2Sq + 2*SinaSq)
-			                   - ScaledSina2Sq*(LDEXP(ScaledSinb2Sq,-refScale) - 2) )/
-			                 SQRT(   (8*ScaledSina2Sq*(2-LDEXP(ScaledSinb2Sq,-refScale))*SinaSq
-			                          + 16*SinaSq*(ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq)))
-			               );
-		}
-		else if (location == newCode(nodeCode,edgeCode)) //point is the other node on the reference edge
-		{
-			SindSq = SinaSq;
-		}
-		else if (location == edgeCode) //point is the node which is not on the reference edge
-		{
-			SindSq = SinbSq;
-			gammasca = interiorAngle(2*refNodeLevel,SinaSq,SinbSq,SincSq);
-		}
-		return {SindSq,gammasca};
-	}
-	else
-	{
-		size_t nextLevel = refNodeLevel+1;
-		unsigned short fCode = at(nextLevel);
-		faceGeometry newFaceGeom(faceGeom);
-		stepupFaceGeometryFrom(refNodeLevel,fCode,newFaceGeom);
-
-		if (fCode == nodeCode)
-		{
-			inFacePolar subFacePolar(calcFacePolar(nextLevel,nodeCode,edgeCode,newFaceGeom,pointLevel,location));
-			subFacePolar.SinDistSq /= 4;
-			return subFacePolar;
-		}
-		else if (fCode == 0)
-		{
-			scaleExp_type refScale = 2*refNodeLevel;
-			unsigned short otherCode = newCode(edgeCode,nodeCode);
-
-			//lengths of the edges in the sub-face with code "nodeCode"
-			fp_type SinaSq = calcEdgeBisection(refScale, faceGeom.SinSqE[edgeCode-1])/4;
-			fp_type SinbSq = calcEdgeBisection(refScale, faceGeom.SinSqE[otherCode-1])/4;
-
-			//distance and angle to the reference node within the center sub-face
-			inFacePolar subFacePolar(calcFacePolar(nextLevel, edgeCode, nodeCode, newFaceGeom, pointLevel, location));
-
-			//distance to the new reference node within the center sub-face
-			fp_type SineSq    = subFacePolar.SinDistSq/4;
-			//angle between original reference edge and connection line point-new reference node
-			fp_type delta     = subFacePolar.angle + interiorAngle(refScale,SinaSq,newFaceGeom.SinSqE[nodeCode-1]/4,SinbSq);
-			fp_type tmpAngle  = COS(delta);
-
-			//distance to the original reference node
-			fp_type SindSq = calcSinSqEdgeSAS(refScale,SinaSq,tmpAngle,SineSq);
-
-			//using spherical sine law is unstable near 90B0 angle --> using cosine law & interiorAngle instead
-			tmpAngle       = SIN(delta)*SQRT(SineSq/SindSq);
-			if (tmpAngle > 0.95) tmpAngle = interiorAngle(refScale,SinaSq,SindSq,SineSq);
-			else tmpAngle = ASIN(tmpAngle);
-
-			return {SindSq,tmpAngle};
-		}
-		else if (fCode == edgeCode)
-		{
-			scaleExp_type refScale = 2*refNodeLevel;
-			unsigned short otherCode = newCode(edgeCode,nodeCode);
-
-			fp_type SinaSq = faceGeom.SinSqE[otherCode-1];
-			inFacePolar subFacePolar(calcFacePolar(nextLevel, edgeCode, otherCode, newFaceGeom, pointLevel, location));
-//			fp_type SinaSq = calcEdgeBisection(refScale, faceGeom.SinSqE[otherCode-1])/4;
-//			inFacePolar subFacePolar(calcFacePolar(nextLevel, edgeCode, nodeCode, newFaceGeom, pointLevel, location));
-
-			fp_type SinfSq    = subFacePolar.SinDistSq/4;
-			fp_type delta     = subFacePolar.angle;
-			fp_type cosDelta  = COS(delta);
-
-			fp_type SindSq = calcSinSqEdgeSAS(refScale,SinaSq,cosDelta,SinfSq);
-
-			//using spherical sine law is unstable near 90B0 angle --> cannot happen in this case
-			return {SindSq,interiorAngle(refNodeLevel,nodeCode,faceGeom) - ASIN(SIN(delta)*SQRT(SinfSq/SindSq))};
-		}
-		else
-		{
-			scaleExp_type refScale = 2*refNodeLevel;
-			unsigned short otherCode = newCode(edgeCode,nodeCode);
-
-			fp_type SinaSq = faceGeom.SinSqE[edgeCode-1];
-			inFacePolar subFacePolar(calcFacePolar(nextLevel, otherCode, edgeCode, newFaceGeom, pointLevel, location));
-
-			fp_type SinfSq    = subFacePolar.SinDistSq/4;
-			fp_type delta     = subFacePolar.angle;
-			fp_type cosDelta  = COS(delta);
-
-			fp_type SindSq = calcSinSqEdgeSAS(refScale,SinaSq,cosDelta,SinfSq);
-
-			//using spherical sine law is unstable near 90B0 angle --> cannot happen in this case
-			return {SindSq,ASIN(SIN(delta)*SQRT(SinfSq/SindSq))};
-		}
-	}
-	return {0,0};
-}
-//assuming flat geometry approximation: for point (pointLevel, location) calculate angle and scaled distance to a particular node
-SPIRID::sGrid::inFacePolar
-SPIRID::sGrid::calcFlatFacePolar(
-    size_t refNodeLevel, // gridlevel of the node and edge
-    unsigned short nodeCode, // node of the face to consider for distance
-    unsigned short edgeCode, // edge of the face to consider for angle
-    const faceGeometry& faceGeom, // scaled edge lengths of the face
-    size_t pointLevel, // gridlevel of the grid point for angle and distance calculation
-    unsigned short location // location==0: crossing point of side bisections; location==1,2,3: a node
-) const
-{
-	size_t levelSteps = std::min(accuracyBits,std::max(std::min(pointLevel,depth()),refNodeLevel)-refNodeLevel);
-	//assign edge lengths and check that nodeCode and edgeCode have allowed values
-	fp_type aSq, bSq, cSq;
-	if (nodeCode == 1)
-	{
-		if (edgeCode == 2)
-		{
-			aSq = faceGeom.SinSqE[1];
-			bSq = faceGeom.SinSqE[2];
-			cSq = faceGeom.SinSqE[0];
-		}
-		else if (edgeCode == 3)
-		{
-			aSq = faceGeom.SinSqE[2];
-			bSq = faceGeom.SinSqE[1];
-			cSq = faceGeom.SinSqE[0];
-		}
-		else return {0,0};
-	}
-	else if (nodeCode == 2)
-	{
-		if (edgeCode == 1)
-		{
-			aSq = faceGeom.SinSqE[0];
-			bSq = faceGeom.SinSqE[2];
-			cSq = faceGeom.SinSqE[1];
-		}
-		else if (edgeCode == 3)
-		{
-			aSq = faceGeom.SinSqE[2];
-			bSq = faceGeom.SinSqE[0];
-			cSq = faceGeom.SinSqE[1];
-		}
-		else return {0,0};
-	}
-	else if (nodeCode == 3)
-	{
-		if (edgeCode == 1)
-		{
-			aSq = faceGeom.SinSqE[0];
-			bSq = faceGeom.SinSqE[1];
-			cSq = faceGeom.SinSqE[2];
-		}
-		else if (edgeCode == 2)
-		{
-			aSq = faceGeom.SinSqE[1];
-			bSq = faceGeom.SinSqE[0];
-			cSq = faceGeom.SinSqE[2];
-		}
-		else return {0,0};
-	}
-	else return {0,0};
-
-	fp_type x = 0.5;
-	fp_type y = 0.5;
-
-	int direction = -1;
-	fp_type axisOffset = 0.25;
-	unsigned short faceCode;
-	for (size_t levelIterator=1; levelIterator<=levelSteps; levelIterator++)
-	{
-		faceCode = at(refNodeLevel+levelIterator);
-		if (faceCode == 0)
-		{
-			direction *= -1;
-		}
-		else if (faceCode == nodeCode)
-		{
-			x += direction*axisOffset;
-			y += direction*axisOffset;
-		}
-		else if (faceCode == edgeCode)
-		{
-			y -= direction*axisOffset;
-		}
-		else
-		{
-			x -= direction*axisOffset;
-		}
-		axisOffset /= 2;
-	}
-
-	if (location == nodeCode)
-	{
-		axisOffset = LDEXP(0.5,refNodeLevel-pointLevel);
-		direction = 1-2*((refNodeLevel-pointLevel)%2);
-		x -= direction*axisOffset;
-		y -= direction*axisOffset;
-	}
-	else if (location == edgeCode)
-	{
-		axisOffset = LDEXP(0.5,refNodeLevel-pointLevel);
-		direction = 1-2*((refNodeLevel-pointLevel)%2);
-		y += direction*axisOffset;
-	}
-	else if (location == newCode(nodeCode,edgeCode))
-	{
-		axisOffset = LDEXP(0.5,refNodeLevel-pointLevel);
-		direction = 1-2*((refNodeLevel-pointLevel)%2);
-		x += direction*axisOffset;
-	}
-
-	if (x==0 && y==0) return {0,0};
-
-	fp_type dSq = (aSq*(2*x-y)*(x+y) + bSq*(2*y-x)*(x+y) - cSq*(2*x-y)*(2*y-x))*4/9;
-	return {dSq,ACOS((aSq*x+(2*y-x)*(bSq-cSq)/3)/(SQRT(dSq*aSq)))};
-}
-
-
-
-//transform sGrid coordinates to polar coordinates
-SPIRID::sPolar
-SPIRID::sGrid::toPolar(size_t level, unsigned short location) const
-{
-	sPolar ThetaPhi(toLocalPolar(0,3,1,level,location));
-
-	switch (operator[](0))
-	{
-	case 0:
-	{
-		return {ThetaPhi.getTheta(),ThetaPhi.getPhi()};
-		break;
-	}
-	case 1:
-	{
-		return {ThetaPhi.getTheta(),two_pi-ThetaPhi.getPhi()};
-		break;
-	}
-	case 2:
-	{
-		return {ThetaPhi.getTheta(),pi-ThetaPhi.getPhi()};
-		break;
-	}
-	case 3:
-	{
-		return {ThetaPhi.getTheta(),ThetaPhi.getPhi()+pi};
-		break;
-	}
-	case 4:
-	{
-		return {pi-ThetaPhi.getTheta(),ThetaPhi.getPhi()};
-		break;
-	}
-	case 5:
-	{
-		return {pi-ThetaPhi.getTheta(),two_pi-ThetaPhi.getPhi()};
-		break;
-	}
-	case 6:
-	{
-		return {pi-ThetaPhi.getTheta(),pi-ThetaPhi.getPhi()};
-		break;
-	}
-	case 7:
-	{
-		return {pi-ThetaPhi.getTheta(),ThetaPhi.getPhi()+pi};
-		break;
-	}
-	default:
-	{
-		return {0,0};
-		break;
-	}
-	}
-	return {0,0};
-}
-//calculate local polar coordinates within a face
-SPIRID::sPolar
-SPIRID::sGrid::toLocalPolar(size_t refNodeLevel,
-                            unsigned short nodeCode,
-                            unsigned short edgeCode,
-                            size_t level,
-                            unsigned short location) const
-{
-	//consider node at level0 nodeCode3 the north south pole, edgeCode1 the prime and antimeridian
-	inFacePolar ThetaPhi(calcFacePolar(refNodeLevel,nodeCode,edgeCode,level,location));
-
-	//in the localPolar data type the distance is stored as 2^(2*level)*Sin(d)^2 --> convert to actual angle
-	if (refNodeLevel>=minScaleSinXToX)
-	{
-		ThetaPhi.SinDistSq = LDEXP(SQRT(ThetaPhi.SinDistSq),-refNodeLevel);
-	}
-	else
-	{
-		ThetaPhi.SinDistSq = ASIN(LDEXP(SQRT(ThetaPhi.SinDistSq),-refNodeLevel));
-	}
-
-	return sPolar(ThetaPhi.SinDistSq,ThetaPhi.angle);
-}
 
 
 
@@ -1493,113 +886,7 @@ SPIRID::sGrid::assignNeighborFace(
 }
 
 
-//distance calculation for points
-SPIRID::angle
-SPIRID::sGrid::distance(size_t levelP1, const sGrid& P1, unsigned short locationP1,
-                        size_t levelP2, const sGrid& P2, unsigned short locationP2)
-{
-	//start by finding the highest common node for P1 and P2
-	commonNode commonN(findHighestCommonNode(levelP1, P1, levelP2, P2));
 
-	//if no common node then we calculate the distance to a mirrored point
-	bool mirror = false;
-	if (commonN.nodeCode1 == 0) //means no common node
-	{
-		mirror = true;
-		sGrid P3(P2);
-		commonN = findHighestCommonNode(levelP1, P1, levelP2, P3.mirror());
-	}
-
-	//calculate distance & angle from points to common nodes
-	size_t levelN1 = commonN.level1;
-	size_t levelN2 = commonN.level2;
-	inFacePolar localP1(P1.calcFacePolar(levelN1, commonN.nodeCode1, commonN.edgeCode1, levelP1, locationP1));
-	inFacePolar localP2(P2.calcFacePolar(levelN2, commonN.nodeCode2, commonN.edgeCode2, levelP2, locationP2));
-	fp_type SinaSq = localP1.SinDistSq;
-	fp_type SinbSq = localP2.SinDistSq;
-
-	//calculate angle between the connections P1-commonNode-P2
-	fp_type cosGapAngle = COS(localP1.angle + commonN.signAngle2*localP2.angle + commonN.gapAngle);
-
-	//check for level differences (occurs when one of the points is closer to the common node)
-	size_t levelOffset = 0;
-	size_t minLevel = levelN1;
-	if (levelN1>levelN2)
-	{
-		levelOffset=levelN1-levelN2;
-		minLevel = levelN2;
-		SinaSq = LDEXP(SinaSq,-levelOffset*2);
-	}
-	else
-	{
-		levelOffset=levelN2-levelN1;
-		SinbSq = LDEXP(SinbSq,-levelOffset*2);
-	}
-
-	//calculate 2^minLevel*Sin(result/2) using special form of spherical cosine law
-	fp_type interimResult = calcSinEdgeHalfSAS(minLevel,SinaSq,cosGapAngle,SinbSq);
-
-	if (minLevel<minScaleSinXToX)
-	{
-		interimResult = ASIN(LDEXP(interimResult,-minLevel)); //interimResult == result/2
-
-		if (mirror) // if the point was mirrored then it is most appropriate to return a result without scaling
-		{
-			interimResult = pi-LDEXP(interimResult,1);
-			minLevel = 0;
-		}
-		else interimResult = LDEXP(interimResult,1+minLevel);
-	}
-	else
-	{
-		interimResult = LDEXP(interimResult,1);  //interimResult == 2^minLevel*result (assuming Sin(x)~x)
-
-		if (mirror)
-		{
-			interimResult = pi-LDEXP(interimResult,-minLevel);
-			minLevel = 0;
-		}
-	}
-
-	return angle(interimResult,minLevel);
-}
-
-fp_type
-SPIRID::sGrid::calcSinEdgeHalfSAS(scaleExp_type scale, fp_type SinaSq, fp_type cosDelta, fp_type SinbSq)
-{
-	/* Calculation method here differs from calcSinSqEdgeSAS:
-	        At a==b and delta==0 the calculated edge length becomes zero and the numerical result is dominated by rounding errors.
-	        Since calcSinSqEdgeSAS returns the square of a length, we loose accuracy by taking the square root of rounding errors.
-	        Here we modify the calculation and return an actual length (instead of the length squared)
-	        If the calculated edge length is d then the return value here is 2^scale * Sin(d/2).
-
-	    From spherical cosine law:
-	    Sin(d/2)^2 = termL^2 + termA^2
-	    termL = |Sin(a/2)*Cos(b/2) - Cos(delta)*Cos(a/2)*Sin(b/2)|
-	    termA = |Cos(a/2)*Sin(b/2)*Sin(delta)|
-	*/
-	scaleExp_type scaleSq = 2*scale;
-
-	fp_type ScaledSina2Sq = calcEdgeBisection(scaleSq,SinaSq); //==4*Sin(a/2)^2
-	fp_type ScaledSinb2Sq = calcEdgeBisection(scaleSq,SinbSq); //==4*Sin(b/2)^2
-
-	fp_type termL = ABS(SQRT(ScaledSina2Sq*(1-LDEXP(ScaledSinb2Sq,-scaleSq-2)))
-	                    - cosDelta*SQRT(ScaledSinb2Sq*(1-LDEXP(ScaledSina2Sq,-scaleSq-2))));
-	fp_type termA = SQRT((1-cosDelta*cosDelta)*(1-LDEXP(ScaledSina2Sq,-scaleSq-2))*ScaledSinb2Sq);
-
-	fp_type result = 0;
-	if (termA == 0) result = termL;
-	else if (termL == 0) result = termA;
-	else if (termA < termL)
-	{
-		result = termL * SQRT((1+termA*termA/(termL*termL)));
-	}
-	else
-	{
-		result = termA * SQRT((1+termL*termL/(termA*termA)));
-	}
-	return LDEXP(result,-1);
-}
 
 
 
@@ -1693,6 +980,7 @@ SPIRID::sGrid::collectNeighborNodesTo(
 	*/
 	return neighborList;
 }
+/*
 std::list<std::pair<SPIRID::sGrid,unsigned short> >&
 SPIRID::sGrid::collectNeighborPointsTo(
     std::list<std::pair<sGrid,unsigned short> >& neighborList,
@@ -1719,7 +1007,8 @@ SPIRID::sGrid::collectNeighborPointsTo(
 
 	return neighborList;
 }
-
+*/
+/*
 SPIRID::funcGraphPoint<>&
 SPIRID::sGrid::getMinPoint(
     const std::list<std::pair<sGrid,unsigned short> >& pointList,
@@ -1764,6 +1053,7 @@ SPIRID::sGrid::localSearchMinNode(
 	getMinPoint(neighborList, level, reference, minFunc);
 	return reference;
 }
+*/
 SPIRID::funcGraphPoint<>
 SPIRID::sGrid::searchMinPoint(size_t maxLevel, scaledFP (*minFunc)(size_t, const sGrid&, unsigned short))
 {
@@ -1820,7 +1110,7 @@ SPIRID::sGrid::searchMinPoint(size_t maxLevel, scaledFP (*minFunc)(size_t, const
 	std::cout << "initial setup: [";
 	std::cout << refMinFace;
 	std::cout << "" << refMinLocation;
-	std::cout << "," << refMinValue;
+	std::cout << "]" << refMinValue;
 	std::cout << " - " << refEdgeCode;
 	std::cout << "," << refEdgeOrientationMatch;
 	std::cout << " - " << refEdgeNeighborFace;
@@ -1842,6 +1132,39 @@ SPIRID::sGrid::searchMinPoint(size_t maxLevel, scaledFP (*minFunc)(size_t, const
 	std::cout << " - " << refEdgeNeighborFace;
 	std::cout << std::endl;
 
+//	std::cout << "next level nodes:" << std::endl;
+	sGrid::subGridScanner tmp(refMinFace.nodeNeighborFaces(0,refMinLocation),1,1);
+	scaledFP minimum = refMinValue;
+	std::pair<sGrid, unsigned short> minPoint = {refMinFace, refMinLocation};
+	for (; tmp != refMinFace.end(); ++tmp)
+	{
+		if (minFunc(1,*tmp,1) < minimum)
+		{
+			minimum = minFunc(1,*tmp,1);
+			minPoint = {*tmp,1};
+		}
+
+		if (minFunc(1,*tmp,2) < minimum)
+		{
+			minimum = minFunc(1,*tmp,2);
+			minPoint = {*tmp,2};
+		}
+
+		if (minFunc(1,*tmp,3) < minimum)
+		{
+			minimum = minFunc(1,*tmp,3);
+			minPoint = {*tmp,3};
+		}
+
+		/*	    std::cout << *tmp << minFunc(1,*tmp,1) << " ";
+			    std::cout << *tmp << minFunc(1,*tmp,2) << " ";
+			    std::cout << *tmp << minFunc(1,*tmp,3);
+		    	std::cout << std::endl;
+		*/
+	}
+	std::cout << "next level minimum: " << minPoint.first << minPoint.second << ": " << minFunc(1,minPoint.first,minPoint.second);
+	std::cout << std::endl;
+
 	for (size_t level_it = 0; level_it < maxLevel; level_it++)
 	{
 		refMinFace.setExtend(level_it+1,refMinLocation);
@@ -1859,26 +1182,56 @@ SPIRID::sGrid::searchMinPoint(size_t maxLevel, scaledFP (*minFunc)(size_t, const
 		std::cout << "," << refEdgeOrientationMatch;
 		std::cout << " - " << refEdgeNeighborFace;
 		std::cout << std::endl;
+
+//	std::cout << "next level nodes:" << std::endl;
+		tmp = sGrid::subGridScanner(refMinFace.nodeNeighborFaces(level_it+1,refMinLocation),level_it+2,level_it+2);
+		minimum = refMinValue+1;
+		minPoint = {refMinFace, refMinLocation};
+		for (; tmp != refMinFace.end(); ++tmp)
+		{
+			if (minFunc(level_it+2,*tmp,1) < minimum)
+			{
+				minimum = minFunc(level_it+2,*tmp,1);
+				minPoint = {*tmp,1};
+			}
+
+			if (minFunc(level_it+2,*tmp,2) < minimum)
+			{
+				minimum = minFunc(level_it+2,*tmp,2);
+				minPoint = {*tmp,2};
+			}
+
+			if (minFunc(level_it+2,*tmp,3) < minimum)
+			{
+				minimum = minFunc(level_it+2,*tmp,3);
+				minPoint = {*tmp,3};
+			}
+		}
+		std::cout << "next level minimum: " << minPoint.first << minPoint.second << ": " << minFunc(level_it+2,minPoint.first,minPoint.second);
+		std::cout << std::endl;
+
 	}
 	return {{refMinFace,refMinLocation},refMinValue};
 
+	/*
+		funcGraphPoint<> reference = {{refPoint, 3}, minFunc(0,refPoint,3)};
 
-	funcGraphPoint<> reference = {{refPoint, 3}, minFunc(0,refPoint,3)};
+		scaledFP newFuncValue = minFunc(0,SouthOct7.first,3);
+		if (newFuncValue < reference.fValue)
+		{
+			reference.dPoint = SouthOct7;
+			reference.fValue = newFuncValue;
+		}
+		for (size_t level_it = 0; level_it < maxLevel; )
+		{
+			localSearchMinNode(level_it,reference,minFunc);
+			reference.dPoint.first.setExtend(++level_it,reference.dPoint.second);
+		}
+		localSearchMinNode(maxLevel,reference,minFunc);
 
-	scaledFP newFuncValue = minFunc(0,SouthOct7.first,3);
-	if (newFuncValue < reference.fValue)
-	{
-		reference.dPoint = SouthOct7;
-		reference.fValue = newFuncValue;
-	}
-	for (size_t level_it = 0; level_it < maxLevel; )
-	{
-		localSearchMinNode(level_it,reference,minFunc);
-		reference.dPoint.first.setExtend(++level_it,reference.dPoint.second);
-	}
-	localSearchMinNode(maxLevel,reference,minFunc);
+		return reference;
+	*/
 
-	return reference;
 }
 
 
@@ -1958,16 +1311,19 @@ void SPIRID::sGrid::searchLocalMinAtLevel(
     scaledFP (*minFunc)(size_t, const sGrid&, unsigned short) // function to minimize
 )
 {
-	std::cout << std::endl;
-	std::cout << "AtLevel search: ";
-	std::cout << std::endl;
+		std::cout << "AtLevel search: ";
+	    std::cout << std::endl;
+	/*
+	    std::cout << std::endl;
+		std::cout << "AtLevel search: ";
+		std::cout << std::endl;
 
-	std::cout << "Start: level: " << level;
-	std::cout << " refMin: [" << refMinFace << refMinLocation << "]" << refMinValue;
-	std::cout << " - " << refEdgeCode << "," << refEdgeOrientationMatch << " - ";
-	std::cout << " neighbor: " << refEdgeNeighborFace << "]" << refMin2ndValue;
-	std::cout << std::endl;
-
+		std::cout << "Start: level: " << level;
+		std::cout << " refMin: [" << refMinFace << refMinLocation << "]" << refMinValue;
+		std::cout << " - " << refEdgeCode << "," << refEdgeOrientationMatch << " - ";
+		std::cout << " neighbor: " << refEdgeNeighborFace << "]" << refMin2ndValue;
+		std::cout << std::endl;
+	*/
 	// node codes at the left side of refEdge (inside the reference face)
 	unsigned short nodeCode0 = refMinLocation; // node code of the reference node
 	unsigned short nodeCode2 = refEdgeCode; // node code of the 3rd node in the face, which is not on refEdge
@@ -1987,8 +1343,7 @@ void SPIRID::sGrid::searchLocalMinAtLevel(
 	bool edgeBOrientationMatch = true;
 
 	// 1st new face & function value at the left side of the face
-	sGrid leftNewFaceA(refMinFace);
-	assignNeighborFace(level, nodeCode1, leftNewFaceA, edgeAOrientationMatch);
+	sGrid leftNewFaceA(refMinFace.neighborFace(level, nodeCode1, edgeAOrientationMatch));
 	scaledFP leftNodeBFValue(minFunc(level, leftNewFaceA, nodeCode1));
 
 	const scaledFP* outerValues[6] = {&leftNodeAFValue,&leftNodeBFValue,&rightNodeAFValue,&refMin2ndValue,&rightNodeAFValue,&refMin2ndValue};
@@ -2013,8 +1368,7 @@ void SPIRID::sGrid::searchLocalMinAtLevel(
 			outerValues[2] = new scaledFP(minFunc(level,*neighborFaces[2],nodeCode2));
 		}
 
-		neighborFaces[4] = new sGrid(refEdgeNeighborFace);
-		*neighborFaces[4] = refEdgeNeighborFace.neighborFace(level, nodeCode1Right);
+		neighborFaces[4] = new sGrid(refEdgeNeighborFace.neighborFace(level, nodeCode1Right));
 		outerValues[3] = new scaledFP(minFunc(level,*neighborFaces[4],nodeCode1Right));
 	}
 
@@ -2023,21 +1377,24 @@ void SPIRID::sGrid::searchLocalMinAtLevel(
 		unsigned short oppositeNodeCode;
 		if (edgeAOrientationMatch) oppositeNodeCode = nodeCode0;
 		else oppositeNodeCode = nodeCode2;
-		std::cout << " neighbors[0]: [" << *neighborFaces[0] << nodeCode2 << "]" << *outerValues[0];
-		std::cout << " neighbors[1]: [" << *neighborFaces[1] << nodeCode1 << "]" << *outerValues[1];
-		std::cout << " neighbors[2]: [" << *neighborFaces[2] << oppositeNodeCode << "]" << *outerValues[2];
-		std::cout << " neighbors[3]: [" << *neighborFaces[4] << nodeCode1Right << "]" << *outerValues[3];
-		std::cout << " neighbors[4]: [" << *neighborFaces[5] << nodeCode2 << "]" << *outerValues[4];
-		std::cout << " neighbors[5]: [" << *neighborFaces[5] << nodeCode1Right << "]" << *outerValues[5];
+	std::cout << "search nodes: ";
+		        std::cout << " refMinPoint: [" << refMinFace << refMinLocation << "]" << refMinValue << " " << minFunc(level,refMinFace,refMinLocation) << std::endl;
+		        std::cout << " neighbors[0]: [" << *neighborFaces[0] << nodeCode2 << "]" << *outerValues[0] << " " << minFunc(level,*neighborFaces[0],nodeCode2) << std::endl;
+				std::cout << " neighbors[1]: [" << *neighborFaces[1] << nodeCode1 << "]" << *outerValues[1] << " " << minFunc(level,*neighborFaces[1],nodeCode1) << std::endl;
+				std::cout << " neighbors[2]: [" << *neighborFaces[2] << oppositeNodeCode << "]" << *outerValues[2] << " " << minFunc(level,*neighborFaces[2],oppositeNodeCode) << std::endl;
+				std::cout << " neighbors[3]: [" << *neighborFaces[3] << nodeCode1Right << "]" << *outerValues[3] << " " << minFunc(level,*neighborFaces[4],nodeCode1Right) << std::endl;
+				std::cout << " neighbors[4]: [" << *neighborFaces[4] << nodeCode2 << "]" << *outerValues[4] << " " << minFunc(level,*neighborFaces[5],nodeCode2) << std::endl;
+				std::cout << " neighbors[5]: [" << *neighborFaces[5] << nodeCode1Right << "]" << *outerValues[5] << " " << minFunc(level,*neighborFaces[5],nodeCode1Right) << std::endl;
 	}
 	else
 	{
-		std::cout << " neighbors[0]: [" << *neighborFaces[0] << nodeCode2 << "]" << *outerValues[0];
-		std::cout << " neighbors[1]: [" << *neighborFaces[1] << nodeCode1 << "]" << *outerValues[1];
-		std::cout << " neighbors[3]: [" << *neighborFaces[3] << nodeCode2 << "]" << *outerValues[2];
-		std::cout << " neighbors[5]: [" << *neighborFaces[5] << nodeCode1Right << "]" << *outerValues[3];
+	std::cout << "search nodes: ";
+		        std::cout << " refMinPoint: [" << refMinFace << refMinLocation << "]" << refMinValue << " " << minFunc(level,refMinFace,refMinLocation) << std::endl;
+		        std::cout << " neighbors[0]: [" << *neighborFaces[0] << nodeCode2 << "]" << *outerValues[0] << " " << minFunc(level,*neighborFaces[0],nodeCode2) << std::endl;
+				std::cout << " neighbors[1]: [" << *neighborFaces[1] << nodeCode1 << "]" << *outerValues[1] << " " << minFunc(level,*neighborFaces[1],nodeCode1) << std::endl;
+				std::cout << " neighbors[3]: [" << *neighborFaces[3] << nodeCode2 << "]" << *outerValues[2] << " " << minFunc(level,*neighborFaces[3],nodeCode2) << std::endl;
+				std::cout << " neighbors[5]: [" << *neighborFaces[5] << nodeCode1Right << "]" << *outerValues[3] << " " << minFunc(level,*neighborFaces[5],nodeCode1Right) << std::endl;
 	}
-	std::cout << std::endl;
 
 	//search for the overal minimum node and the smallest node connected to that
 	unsigned short minIndex = minIndexLocalSearch(refMinValue,faceCount,outerValues);
@@ -2358,11 +1715,11 @@ void SPIRID::sGrid::searchLocalMinAtLevel(
 		assignNeighborFace(level,refEdgeCode,refEdgeNeighborFace,refEdgeOrientationMatch);
 	}
 
-	std::cout << "End: level: " << level;
-	std::cout << " refMin: [" << refMinFace << refMinLocation << "]" << refMinValue;
-	std::cout << " - " << refEdgeCode << "," << refEdgeOrientationMatch << " - ";
-	std::cout << " neighbor: " << refEdgeNeighborFace << "]" << refMin2ndValue;
-	std::cout << std::endl;
+		std::cout << "End: level: " << level;
+		std::cout << " refMin: [" << refMinFace << refMinLocation << "]" << refMinValue;
+		std::cout << " - " << refEdgeCode << "," << refEdgeOrientationMatch << " - ";
+		std::cout << " neighbor: " << refEdgeNeighborFace << "]" << refMin2ndValue;
+		std::cout << std::endl;
 
 	if (faceCount == 6)
 	{
@@ -2388,10 +1745,12 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
     scaledFP (*minFunc)(size_t, const sGrid&, unsigned short)
 )
 {
-	std::cout << std::endl;
-	std::cout << "NextLevel search: ";
-	std::cout << std::endl;
+		std::cout << "NextLevel search: ";
+		std::cout << std::endl;
+
 	size_t nextLevel = lowerLevel+1;
+	refMinFace.resize(nextLevel);
+	refEdgeNeighborFace.resize(nextLevel);
 
 	// node codes of the various nodes
 	unsigned short nodeCode0 = refMinLocation; // node code of the reference node
@@ -2402,15 +1761,19 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 	unsigned short nodeCode1Right = nodeCode0;
 	if (!refEdgeOrientationMatch) std::swap(nodeCode0Right,nodeCode1Right);
 
+		std::cout << "lowerLevel: " << lowerLevel << std::endl;
+		std::cout << " refMin: [" << refMinFace << refMinLocation << "]" << refMinValue;
+		std::cout << ": (" << minFunc(lowerLevel,refMinFace,nodeCode0) << "," << minFunc(lowerLevel,refMinFace,nodeCode1) << "," << minFunc(lowerLevel,refMinFace,nodeCode2) << ") ";
+		std::cout << " - " << refEdgeCode << "," << refEdgeOrientationMatch << " - " << refMinFace.neighborFace(lowerLevel,refEdgeCode) << std::endl;
+		std::cout << " refNeighbor: " << refEdgeNeighborFace;
+		std::cout << ": (" << minFunc(lowerLevel,refEdgeNeighborFace,nodeCode0Right) << "," << minFunc(lowerLevel,refEdgeNeighborFace,nodeCode1Right) << "," << minFunc(lowerLevel,refEdgeNeighborFace,nodeCode2) << ") ";
+		std::cout << std::endl;
+
+
 	// 1st step: calculate function value at the middle point of refEdge
 	sGrid nextLevelFirstFace(refMinFace);
 	nextLevelFirstFace.set(nextLevel,nodeCode0); //assume sufficient capacity for the gridCode
 	scaledFP midPointFValue = minFunc(nextLevel, nextLevelFirstFace, nodeCode1);
-
-	std::cout << "lowerLevel: " << lowerLevel;
-	std::cout << " refMin: [" << refMinFace << refMinLocation << "]" << refMinValue;
-	std::cout << " - " << refEdgeCode << " - ";
-	std::cout << " midPoint: " << nextLevelFirstFace << nodeCode1 << "]" << midPointFValue;
 
 	// use different ways to other neighbor faces depending function values
 	if (refMinValue < midPointFValue)
@@ -2437,21 +1800,23 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 		 */
 		sGrid leftCenterFace(refMinFace);
 		leftCenterFace.set(nextLevel,0); //assume sufficient capacity for the gridCode
-		scaledFP leftCenterFaceFValueA( minFunc(nextLevel, leftCenterFace, nodeCode0) );
-		scaledFP leftCenterFaceFValueB( minFunc(nextLevel, leftCenterFace, nodeCode1) );
+		scaledFP leftCenterFaceFValueA( minFunc(nextLevel, leftCenterFace, nodeCode1) );
+		scaledFP leftCenterFaceFValueB( minFunc(nextLevel, leftCenterFace, nodeCode0) );
 
 		sGrid rightCenterFace(refEdgeNeighborFace);
 		rightCenterFace.set(nextLevel,0); //assume sufficient capacity for the gridCode
-		scaledFP rightCenterFaceFValueA( minFunc(nextLevel, rightCenterFace, nodeCode0Right) );
-		scaledFP rightCenterFaceFValueB( minFunc(nextLevel, rightCenterFace, nodeCode1Right) );
-
-		std::cout << " leftCenterFaceFValueA: " << leftCenterFaceFValueA;
-		std::cout << " leftCenterFaceFValueB: " << leftCenterFaceFValueB;
-		std::cout << " rightCenterFaceFValueA: " << rightCenterFaceFValueA;
-		std::cout << " rightCenterFaceFValueB: " << rightCenterFaceFValueB;
-		std::cout << " rightCenterFace: " << rightCenterFace;
-		std::cout << std::endl;
-
+		scaledFP rightCenterFaceFValueA( minFunc(nextLevel, rightCenterFace, nodeCode1Right) );
+		scaledFP rightCenterFaceFValueB( minFunc(nextLevel, rightCenterFace, nodeCode0Right) );
+/*
+				std::cout << " lower level values: (" << refMinValue << "," << minFunc(lowerLevel,refMinFace,nodeCode1) << ")";
+				std::cout << std::endl;
+				std::cout << " leftCenterFace : " << leftCenterFace << " (" << nodeCode2 << "," << nodeCode0 << "," << nodeCode1 << ") (";
+				std::cout << midPointFValue << "," << leftCenterFaceFValueA << "," << leftCenterFaceFValueB << ")";
+				std::cout << std::endl;
+				std::cout << " rightCenterFace: " << rightCenterFace << " ("<< nodeCode2 << "," << nodeCode0Right << "," << nodeCode1Right << ") (";
+				std::cout << midPointFValue << "," << rightCenterFaceFValueA << "," << rightCenterFaceFValueB << ")";
+				std::cout << std::endl;
+*/
 
 		//search node with minimal function value
 		unsigned short minIndex = 0;
@@ -2502,7 +1867,10 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 				minIndex = 4;
 				minValue = rightCenterFaceFValueB;
 			}
-
+/*
+			std::cout << "minIndex 2: " << minIndex;
+			std::cout << std::endl;
+*/
 			// assign correct return values
 			refMinValue = midPointFValue;
 			if (minIndex == 6)
@@ -2558,44 +1926,45 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 		}
 		else if (minIndex == 1) // minimum is nodeA in the left center face
 		{
-			refMinLocation = nodeCode0;
 			if (refMinValue < midPointFValue)
 			{
 				if (leftCenterFaceFValueB < refMinValue)
 				{
-					// refMinLocation & refMinValue already assigned
+					refMinFace.set(nextLevel,nodeCode2);
+                    refMinLocation = nodeCode0;
+					// refMinValue will be assigned in the end
 					refEdgeCode = nodeCode2;
-					refEdgeNeighborFace = refMinFace.set(nextLevel,nodeCode2);
-					refMinFace = leftCenterFace;
 					refEdgeOrientationMatch = true;
+					refEdgeNeighborFace  = leftCenterFace;
 				}
 				else
 				{
 					refMinFace = nextLevelFirstFace;
-					// refMinLocation & refMinValue already assigned
-					refEdgeCode = nodeCode0;
-					refEdgeNeighborFace = nextLevelFirstFace;
-					assignNeighborFace(nextLevel,refEdgeCode,refEdgeNeighborFace,refEdgeOrientationMatch);
 					refMinLocation = nodeCode2;
+					// refMinValue will be assigned in the end
+					refEdgeCode = nodeCode1;
+					refEdgeNeighborFace = nextLevelFirstFace.neighborFace(nextLevel,refEdgeCode,refEdgeOrientationMatch);
 				}
 			}
 			else
 			{
 				if (leftCenterFaceFValueB < midPointFValue)
 				{
-					// refMinLocation & refMinValue already assigned
+					refMinFace.set(nextLevel,nodeCode2);
+                    refMinLocation = nodeCode0;
+					// refMinValue will be assigned in the end
 					refEdgeCode = nodeCode2;
-					refEdgeNeighborFace = refMinFace.set(nextLevel,nodeCode2);
-					refMinFace = leftCenterFace;
 					refEdgeOrientationMatch = true;
+					refEdgeNeighborFace  = leftCenterFace;
 				}
 				else
 				{
-					refMinFace = leftCenterFace;
-					// refMinLocation & refMinValue already assigned
-					refEdgeCode = nodeCode1;
-					refEdgeNeighborFace = nextLevelFirstFace;
+					refMinFace = nextLevelFirstFace;
+                    refMinLocation = nodeCode2;
+					// refMinValue will be assigned in the end
+					refEdgeCode = nodeCode0;
 					refEdgeOrientationMatch = true;
+					refEdgeNeighborFace = leftCenterFace;
 				}
 			}
 			refMinValue = leftCenterFaceFValueA;
@@ -2603,7 +1972,7 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 		else if (minIndex == 2) // minimum is nodeB in the left center face
 		{
 			refMinFace = leftCenterFace;
-			refMinLocation = nodeCode1;
+			refMinLocation = nodeCode0;
 			refMinValue = leftCenterFaceFValueB;
 			refEdgeOrientationMatch = true;
 
@@ -2616,14 +1985,14 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 			else
 			{
 				// refMinFace, refMinLocation, refMinValue & refEdgeOrientationMatch already assigned
-				refEdgeCode = nodeCode0;
-				refEdgeNeighborFace = leftCenterFace.set(nextLevel,nodeCode0);
+				refEdgeCode = nodeCode1;
+				refEdgeNeighborFace = leftCenterFace.set(nextLevel,nodeCode1);
 			}
 		}
 		else if (minIndex == 4) // minimum is nodeA in the right center face
 		{
 			refMinFace = rightCenterFace;
-			refMinLocation = nodeCode1Right;
+			refMinLocation = nodeCode0Right;
 			refMinValue = rightCenterFaceFValueB;
 			refEdgeOrientationMatch = true;
 
@@ -2636,54 +2005,58 @@ void SPIRID::sGrid::searchLocalMinNextLevel(
 			else
 			{
 				// refMinFace, refMinLocation, refMinValue & refEdgeOrientationMatch already assigned
-				refEdgeCode = nodeCode0Right;
-				refEdgeNeighborFace.set(nextLevel,nodeCode0Right);
+				refEdgeCode = nodeCode1Right;
+				refEdgeNeighborFace.set(nextLevel,nodeCode1Right);
 			}
 
 		}
 		else if (minIndex == 5) // minimum is nodeB in the right center face
 		{
 			refMinFace = rightCenterFace;
-			refMinLocation = nodeCode0Right;
-			refEdgeOrientationMatch = true;
+			refMinLocation = nodeCode1Right;
 
 			if (refMinValue < midPointFValue)
 			{
 				if (rightCenterFaceFValueB < refMinValue)
 				{
-					refMinValue = rightCenterFaceFValueA;
-					// refMinFace, refMinLocation, refMinValue & refEdgeOrientationMatch already assigned
+                    refMinFace = rightCenterFace;
+                    refMinLocation = nodeCode1Right;
+					// refMinValue will be assigned in the end
 					refEdgeCode = nodeCode2;
+                    refEdgeOrientationMatch = true;
 					refEdgeNeighborFace.set(nextLevel,nodeCode2);
 				}
 				else
 				{
-					refMinValue = rightCenterFaceFValueA;
-					// refMinFace, refMinLocation, refMinValue & refEdgeOrientationMatch already assigned
-					refMinFace = refEdgeNeighborFace;
+					refMinFace = refEdgeNeighborFace.set(nextLevel,nodeCode0Right);
 					refMinLocation = nodeCode2;
-					refEdgeCode = nodeCode0Right;
-					refEdgeNeighborFace = refMinFace;
-					assignNeighborFace(nextLevel,refEdgeCode,refEdgeNeighborFace,refEdgeOrientationMatch);
+					// refMinValue will be assigned in the end
+					refEdgeCode = nodeCode1Right;
+					refEdgeNeighborFace = refMinFace.neighborFace(nextLevel,refEdgeCode,refEdgeOrientationMatch);
 				}
 			}
 			else
 			{
 				if (rightCenterFaceFValueB < midPointFValue)
 				{
-					refMinValue = rightCenterFaceFValueA;
-					// refMinFace, refMinLocation, refMinValue & refEdgeOrientationMatch already assigned
+                    refMinFace = rightCenterFace;
+                    refMinLocation = nodeCode1Right;
+					// refMinValue will be assigned in the end
 					refEdgeCode = nodeCode2;
+                    refEdgeOrientationMatch = true;
 					refEdgeNeighborFace.set(nextLevel,nodeCode2);
 				}
 				else
 				{
-					refMinValue = rightCenterFaceFValueA;
-					// refMinFace, refMinLocation, refMinValue & refEdgeOrientationMatch already assigned
-					refEdgeCode = nodeCode1Right;
-					refEdgeNeighborFace.set(nextLevel,nodeCode1Right);
+                    refMinFace = rightCenterFace;
+                    refMinLocation = nodeCode1Right;
+					// refMinValue will be assigned in the end
+					refEdgeCode = nodeCode0Right;
+                    refEdgeOrientationMatch = true;
+					refEdgeNeighborFace.set(nextLevel,nodeCode0Right);
 				}
 			}
+			refMinValue = rightCenterFaceFValueA;
 		}
 	}
 	return;
