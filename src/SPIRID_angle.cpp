@@ -1,4 +1,4 @@
-#include <SPIRID.h>
+#include <SPIRID_aux.h>
 
 fp_type SPIRID::angle::unitScale=1.;
 std::string SPIRID::angle::unitSymbol="";

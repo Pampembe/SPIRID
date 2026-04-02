@@ -1,5 +1,5 @@
-#include <SPIRID.h>
 #include <cmath>
+#include <SPIRID_aux.h>
 
 const SPIRID::sPolar& SPIRID::sPolar::set(fp_type t, fp_type p)
 {
@@ -44,6 +44,7 @@ SPIRID::angle SPIRID::sPolar::distance(const sPolar& P1, const sPolar& P2)
 
 	return angle(distance);
 }
+
 
 std::ostream& SPIRID::operator << (std::ostream& out, const sPolar& P)
 {

@@ -1,162 +1,17 @@
 #ifndef SPIRID_H
 #define SPIRID_H
 
-#include <iostream> //for I/O operations
+#include <iostream>
 
-#include <vector> //grid based coordinate system uses vector<bool> to label points
-#include <list>
+#include <vector> // grid based coordinate system uses vector<bool> to label points
+#include <list>   // for member function return values (like the list of neighbors)
 
-#include <numbers> //for standard math functions and to define constants related to pi
-#include <cmath> //for standard math functions and to define constants related to pi
-
-/*
-#define fp_type float //standard floating point type for calculations
-#define SQRT sqrtf //sqrt for float numbers
-#define ACOS acosf //acos for float numbers
-#define ASIN asinf //asin for float numbers
-#define SIN  sinf //sin for float numbers
-#define COS  cosf //cos for float numbers
-#define LDEXP ldexpf //multiply float by 2^exp
-#define ABS std::abs
-*/
-
-#define fp_type double //standard floating point type for calculations
-#define SQRT sqrt //sqrt for float numbers
-#define ACOS acos //acos for float numbers
-#define ASIN asin //asin for float numbers
-#define SIN  sin //sin for float numbers
-#define COS  cos //cos for float numbers
-#define LDEXP ldexp //multiply float by 2^exp
-#define ABS std::abs
-
-#define scaleExp_type unsigned long long
-
+#include <SPIRID_aux.h>
 
 
 //SPIRID - SPherical CoordInate gRID
 namespace SPIRID
 {
-
-
-//constants related to pi
-const fp_type pi = M_PI;
-const fp_type pi_2 = M_PI_2;
-const fp_type two_pi = 2*M_PI;
-
-
-
-
-
-
-//floating point type allowing arbitrarily small numbers by including a scaling factor
-class scaledFP
-{
-	//actual number is mantissa * 2^(-scaleExponent)
-	fp_type mantissa;
-	scaleExp_type scaleExponent;
-
-	//mantissa digits of the fp_type
-	static const size_t FPDigits;
-	//the maximum negative exponent supported by fp_type (-min_exponent)
-	static const scaleExp_type FPMaxExponent;
-
-public:
-	inline scaledFP(fp_type m, scaleExp_type e = 0) : mantissa(m), scaleExponent(e) {}; //standard constructor
-
-	//get mantissa and exponent
-	inline fp_type getMantissa() const {
-		return mantissa;
-	};
-	inline scaleExp_type getExponent() const {
-		return scaleExponent;
-	};
-
-	inline bool operator < (const scaledFP& y) const
-	{
-		scaleExp_type minExp = std::min(y.scaleExponent,scaleExponent);
-		if (y.scaleExponent > scaleExponent)
-		{
-			return (LDEXP(mantissa,-(y.scaleExponent-scaleExponent)) < y.mantissa);
-		}
-		return (mantissa < LDEXP(y.mantissa,-(scaleExponent-y.scaleExponent)));
-	}
-
-	operator fp_type() const; //convert to standard float
-};
-//standard output for scaledFP
-std::ostream& operator << (std::ostream& out, const scaledFP&);
-
-
-
-
-
-
-//class angle: automatically converts to a given unit (Rad/Deg/Pi) on output
-class angle : public scaledFP
-{
-
-public:
-	inline angle(fp_type m, scaleExp_type e = 0) : scaledFP(m,e) {}; //standard constructor
-
-	static fp_type unitScale; // to convert radians/deg/...: radian-->unitScale=1; deg-->unitScale=180/Pi
-	static std::string unitSymbol; //after switching unit the output functions adds a symbol
-
-	//functions to change unit (global)
-	static void unitPi();
-	static void unitRad();
-	static void unitDeg();
-};
-//output for anlge
-std::ostream& operator << (std::ostream& out, const angle&);
-
-
-
-
-
-
-//polar coordinates of the sphere (polar and azimuthal angle, radius==1)
-class sPolar
-{
-	fp_type theta; // Polar angle in [0,Pi]
-	fp_type phi;   // Azimuthal angle in [0,2Pi)
-	void normalize(); // shift theta into [0,Pi] and phi into [0,2Pi)
-
-public:
-	inline sPolar(fp_type t, fp_type p) : theta(t), phi(p) {
-		normalize();
-	};
-	const sPolar& set(fp_type t, fp_type p);
-	inline angle getTheta() const {
-		return angle(theta);
-	};
-	inline angle getPhi() const {
-		return angle(phi);
-	};
-
-	static angle distance(const sPolar& P1, const sPolar& P2);
-};
-//output for polar coordinates
-std::ostream& operator << (std::ostream& out, const sPolar&);
-
-
-
-
-class sGrid;
-
-
-
-template<class domain_type = std::pair<sGrid,unsigned short>, class image_type = scaledFP>
-struct funcGraphPoint
-{
-	domain_type dPoint;
-	image_type fValue;
-};
-
-
-
-
-
-
 //triangle grid based coordinates of the sphere (radius==1)
 /*  Each octant of the sphere is considered a spherical triangle.
     Every spherical triangle is then successively divided into four sub-triangles.
@@ -166,15 +21,11 @@ struct funcGraphPoint
         Point: A point inside a face, further characterized by a location code
             location 0: the point where side bisection lines intersect
             location 1,2,3: the respective nodes of the face
-        Level: number of face division to get to a certain face (initial octant is level 0)
+        Level: number of face divisions to get to a certain face (initial octant is level 0)
 */
 class sGrid
 {
 public:
-	//standard constructors
-	inline sGrid(size_t depth = 0) : gridCode(2*depth+3) {};
-	inline sGrid(const sGrid& P) : gridCode(P.gridCode) {};
-
 	/*  A face is represented by a gridCode with depth+1 digits:
 	        1st digit (0..7): grid level 0, identifies the octant of the sphere
 	        nth digit (0..3): grid level n-1, identifies the sub-faces after successive divisions
@@ -182,6 +33,12 @@ public:
 	    A gridCode of depth D also represents D faces with smaller depths through truncation of the last digits
 	    A gridCode of depth D also represents infinitly many faces with higher grid levels through appending zeros after digit D+1
 	*/
+
+	//standard constructors
+	inline sGrid(size_t depth = 0) : gridCode(2*depth+3) {};
+	inline sGrid(const sGrid& P) : gridCode(P.gridCode) {};
+
+    //constructor using a list of face codes
 	sGrid(const std::vector<unsigned short>& faceCodes);
     //internally we represent all faceCodes in a single bit array
 	sGrid(const std::vector<bool>& bitCode);
@@ -244,14 +101,6 @@ public:
 	{
 	    return !(operator == (P));
 	}
-
-
-
-	//calculation accuracy (accuracyBits cannot be larger than digits of fp_type)
-	static void setAccuracyBits(size_t);
-	inline static size_t getAccuracyBits() {
-		return accuracyBits;
-	};
 
 
 
@@ -336,7 +185,7 @@ public:
 	subGridScanner end() const;
 
 protected:
-    // auxiliary functions to get neighboring node and edge codes
+    // auxiliary functions to get new node, edge & face codes (independent of the grid)
 	inline static unsigned short nextNode(unsigned short code) {
 		return newNodeCodes[code];
 	};
@@ -351,6 +200,10 @@ private:
 	static const unsigned short newNodeCodes[4];
 	static const unsigned short newFaceCodes[4];
 	static const unsigned short newCodes[7];
+
+
+
+
 
 private:
 	/* calculation of the distance between two points P1 & P2:
@@ -409,15 +262,29 @@ private:
 
 
 
-
-
-
 public:
+	//calculation accuracy (accuracyBits cannot be larger than digits of fp_type)
+	static void setAccuracyBits(size_t);
+	inline static size_t getAccuracyBits() {
+		return accuracyBits;
+	};
+
+
+
     /* geometry related functions */
 	/* Each point at every grid level corresponds to a
 	   face (faceCodes 0..3) with edges and nodes (codes 1..3).
 	   We can calculate edge lengths, interior angles and area for that face.
 	*/
+	//get the orientation of a face
+    inline signed short orientation() const
+    {
+        signed short fOrientation = 1;
+        if (gridCode[0]) fOrientation *= -1;
+        if (gridCode[1]) fOrientation *= -1;
+        if (gridCode[2]) fOrientation *= -1;
+        return fOrientation;
+    }
 	//calculate the area of a face
 	inline angle area(size_t level) const
 	{
@@ -480,7 +347,7 @@ private:
 
 public:
 	//convertion functions from and to polar coordinates
-	sGrid(const sPolar& P);
+	sGrid(const sPolar& P, size_t level = accuracyBits);
 	sPolar toPolar(size_t level, unsigned short location = 0) const;
 	inline sPolar toPolar() const {
 		return toPolar(depth(),0);
@@ -504,7 +371,8 @@ private:
 	/* auxiliary functions used to calculate local polar coordinates inside a face */
 	// data type for distance and direction data (local polar coordinates):
 	//      distance d as Sin(d)^2*2^(2*level), angle in standard radians
-	struct inFacePolar
+public:
+struct inFacePolar
 	{
 		//distance between a point and a node (stored as as Sin(d)^2*2^(2*level))
 		fp_type SinDistSq;
@@ -543,6 +411,11 @@ private:
 public:
     /* functions to determine relations between multiple points on the sphere */
 	//calculate the distance between two points: both can be node or center point, determined by location
+	//for a distance d: return value is Sin(d/2), bool reference "mirror" is used to determine if it is the distance to the mirror point
+	static scaledFP sinDistanceHalf(size_t level1, const sGrid& P1, unsigned short location1,
+                                    size_t level2, const sGrid& P2, unsigned short location2,
+                                    bool& mirror);
+	//return value is the actual distance in [0,pi]
 	static angle distance(size_t level1, const sGrid& P1, unsigned short location1,
 	                      size_t level2, const sGrid& P2, unsigned short location2);
 	//as above, but restricted to center points
@@ -555,7 +428,11 @@ public:
 	{
 		return distance(P1.depth(), P1, P2.depth(), P2);
 	};
-
+	static sPolar referencePolar;
+	inline static scaledFP distanceToRefPoint(size_t level, const sGrid& P, unsigned short location)
+	{
+	    return sPolar::distance(referencePolar, P.toPolar(level, location));
+	}
 
 
 
@@ -584,32 +461,42 @@ private:
 
 
 
-	//function to find neighbor nodes of a given node P (assuming location in 1,2,3) --> result in neighborList
-	static std::list<std::pair<sGrid,unsigned short> >&
-	collectNeighborNodesTo(std::list<std::pair<sGrid,unsigned short> >& neighborList,
-	                       size_t level,
-	                       const sGrid& P,
-	                       unsigned short location);
-	//function to find neighbor points (including face centers) of a given node P --> result in neighborList
-	static std::list<std::pair<sGrid,unsigned short> >&
-	collectNeighborPointsTo(std::list<std::pair<sGrid,unsigned short> >& neighborList,
-	                        size_t level,
-	                        const sGrid& P,
-	                        unsigned short location);
-	//function to collect nodes of a given face --> result in neighborList
-	static std::list<std::pair<sGrid,unsigned short> >&
-	collectFaceNodesTo(std::list<std::pair<sGrid,unsigned short> >& neighborList,
-	                   size_t level,
-	                   const sGrid& P,
-	                   unsigned short location);
-
-
 
 public:
 
+    static sGrid minFaceSearch(
+        size_t maxLevel,
+        scaledFP (*)(size_t, const sGrid&, unsigned short));
+    static void minNodeSearch(
+        size_t maxLevel,
+        scaledFP (*)(size_t, const sGrid&, unsigned short),
+        sGrid& resultFace,
+        unsigned short& resultLocation,
+        scaledFP& resultMinValue);
+    static void localMinNodeSearchNextLevel(
+        size_t lowerLevel,
+        scaledFP (*)(size_t, const sGrid&, unsigned short),
+        sGrid& refFace,
+        unsigned short& refLocation,
+        scaledFP& refMinValue);
 
 
-	static funcGraphPoint<> searchMinPoint(size_t maxLevel, scaledFP (*)(size_t, const sGrid&, unsigned short));
+
+
+
+
+
+
+
+
+
+	static void searchMinPoint(
+	    size_t maxLevel,
+	    scaledFP (*)(size_t, const sGrid&, unsigned short),
+        sGrid& resultFace,
+        unsigned short& resultLocation,
+        scaledFP& resultValue);
+//	static funcGraphPoint<> searchMinPoint(size_t maxLevel, scaledFP (*)(size_t, const sGrid&, unsigned short));
 	// function to search for a local minimum node around a node at a given grid level: reference type arguments are used to return results
 	static void searchLocalMinAtLevel(
 	    size_t level,
@@ -636,25 +523,15 @@ public:
 	static unsigned short minIndexLocalSearch(const scaledFP& centerValue, unsigned short outerValCount, const scaledFP** outerValues);
 	static unsigned short min2ndIndexLocalSearch(unsigned short min1stIndex, const scaledFP& centerValue, unsigned short outerValCount, const scaledFP** outerValues);
 
-/*
-	static funcGraphPoint<>& localSearchMinNode(
-	    size_t level,
-	    funcGraphPoint<>& reference,
-	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short));
-	static funcGraphPoint<>& localSearchMinPoint(
-	    size_t level,
-	    funcGraphPoint<>& reference,
-	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short));
-	static funcGraphPoint<>& getMinPoint(
-	    const std::list<std::pair<sGrid,unsigned short> >& pointList,
-	    size_t level,
-	    funcGraphPoint<>& reference,
-	    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short));
-*/
+
+
+
+
 	static scaledFP test(size_t level, const sGrid& P, unsigned short location) {
 		sPolar TP(P.toPolar(level,location));
-		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/5,pi/3)),0);
-//		return scaledFP(std::abs((TP.getTheta()-pi/8.)) + std::abs((TP.getPhi()-pi/8.)),0);
+//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/5,pi/3)),0);
+//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/8,pi/8)),0);
+		return scaledFP(SQRT((fp_type(TP.getTheta())-pi/8.)*(fp_type(TP.getTheta())-pi/8.) + (fp_type(TP.getPhi())-5*pi/8.)*(fp_type(TP.getPhi())-5*pi/8.)),0);
 	};
 
 

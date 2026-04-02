@@ -1,8 +1,29 @@
 #include <limits>
-#include <SPIRID.h>
+#include <SPIRID_aux.h>
 
 const size_t SPIRID::scaledFP::FPDigits = std::numeric_limits<fp_type>::digits;
 const scaleExp_type SPIRID::scaledFP::FPMaxExponent = -std::numeric_limits<fp_type>::min_exponent;
+
+/*
+SPIRID::scaledFP
+SPIRID::scaledFP::operator + (const scaledFP& X) const
+{
+	if (X.scaleExponent > scaleExponent)
+	{
+		return {mantissa + LDEXP(X.mantissa,scaleExponent-X.scaleExponent), scaleExponent};
+	}
+	return {X.mantissa + LDEXP(mantissa,X.scaleExponent-scaleExponent), X.scaleExponent};
+};
+*/
+SPIRID::scaledFP
+SPIRID::scaledFP::operator - (const scaledFP& X) const
+{
+	if (X.scaleExponent > scaleExponent)
+	{
+		return {mantissa - LDEXP(X.mantissa,scaleExponent-X.scaleExponent), scaleExponent};
+	}
+	return {X.mantissa - LDEXP(mantissa,X.scaleExponent-scaleExponent), X.scaleExponent};
+};
 
 SPIRID::scaledFP::operator fp_type() const
 {
