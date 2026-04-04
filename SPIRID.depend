@@ -1,22 +1,22 @@
 # depslib dependency file v1.0
-1774812085 source:c:\users\pampembe\documents\projekte\spirid\spirid\main.cpp
+1775190511 source:c:\users\pampembe\documents\projekte\spirid\spirid\main.cpp
 	<iostream>
 	<cmath>
 	<SPIRID.h>
 
-1774814816 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid.h
+1775194521 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid.h
 	<iostream>
 	<vector>
 	<list>
-	<numbers>
-	<cmath>
+	<SPIRID_aux.h>
+	<SPIRID_sGrid_searches.h>
 
-1774812085 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_angle.cpp
-	<SPIRID.h>
+1775147262 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_angle.cpp
+	<SPIRID_aux.h>
 
-1774812085 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_scaledfp.cpp
+1775147262 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_scaledfp.cpp
 	<limits>
-	<SPIRID.h>
+	<SPIRID_aux.h>
 
 1774672947 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgridpoint.cpp
 	<SPIRID_sGridPoint.h>
@@ -25,12 +25,25 @@
 1774672947 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid_sgridpoint.h
 	<SPIRID.h>
 
-1774812085 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_spolar.cpp
-	<SPIRID.h>
+1775147262 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_spolar.cpp
 	<cmath>
+	<SPIRID_aux.h>
 
-1774812085 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgrid.cpp
+1775188882 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgrid.cpp
 	<cmath>
+	<SPIRID.h>
+
+1775187691 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid_aux.h
+	<ostream>
+	<cmath>
+	<algorithm>
+
+1775189529 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgrid_searches.cpp
+	<SPIRID.h>
+
+1775192702 source:c:\users\pampembe\documents\projekte\spirid\spirid\src\spirid_sgrid_geometry.cpp
 	<limits>
 	<SPIRID.h>
+
+1775189529 c:\users\pampembe\documents\projekte\spirid\spirid\include\spirid_sgrid_searches.h
 

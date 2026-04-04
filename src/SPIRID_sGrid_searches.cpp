@@ -1,13 +1,13 @@
 #include <SPIRID.h>
 
-//main function to find the common node of two faces
-SPIRID::sGrid::commonNode
-SPIRID::sGrid::findHighestCommonNode(size_t level1, const sGrid& P1, size_t level2, const sGrid& P2)
+//main function to find a reference node of two faces
+SPIRID::sGrid::pointPairRefNode
+SPIRID::sGrid::findHighestRefNode(size_t level1, const sGrid& P1, size_t level2, const sGrid& P2)
 {
 	//ensure level1 <= level2
 	if (level1 > level2)
 	{
-		commonNode N(findHighestCommonNode(level2, P2, level1, P1));
+		pointPairRefNode N(findHighestRefNode(level2, P2, level1, P1));
 		std::swap(N.level1,N.level2);
 		std::swap(N.nodeCode1,N.nodeCode2);
 		std::swap(N.edgeCode1,N.edgeCode2);
@@ -33,7 +33,7 @@ SPIRID::sGrid::findHighestCommonNode(size_t level1, const sGrid& P1, size_t leve
 		return sameFaceStepupTo(1,level1,P1,level2,P2);
 		break;
 	}
-	// cases 1,2,4 --> unique common node at level0 already, 1: N1, 2: N2, 4: N3
+	// cases 1,2,4 --> single reference node at level0 already, 1: N1, 2: N2, 4: N3
 	case 1:
 	{
 		return {lastLevelAtNode(1,1,level1,P1),1,2,
@@ -74,7 +74,7 @@ SPIRID::sGrid::findHighestCommonNode(size_t level1, const sGrid& P1, size_t leve
 	}
 	return {0,0,0, 0,0,0, 0,0};
 }
-SPIRID::sGrid::commonNode
+SPIRID::sGrid::pointPairRefNode
 SPIRID::sGrid::sameFaceStepupTo(size_t level, size_t level1, const sGrid& P1, size_t level2, const sGrid& P2)
 {
 	// assume level1 <= level2
@@ -124,7 +124,7 @@ SPIRID::sGrid::sameFaceStepupTo(size_t level, size_t level1, const sGrid& P1, si
 	        lastLevelAtNode(nextLevel,fCode1,level2,P2),fCode1,edgeCode,
 	        pi,1}; // using that the angle between the relevant edges in P1 and P2 is pi and cos(Pi+x)==Cos(Pi-x)
 }
-SPIRID::sGrid::commonNode
+SPIRID::sGrid::pointPairRefNode
 SPIRID::sGrid::commonEdgeStepupTo(size_t level, unsigned short edgeCode, bool orientationMatch, size_t level1, const sGrid& P1, size_t level2, const sGrid& P2)
 {
 	unsigned short f1NodeLeft  = nextNode(edgeCode);
@@ -133,7 +133,7 @@ SPIRID::sGrid::commonEdgeStepupTo(size_t level, unsigned short edgeCode, bool or
 	unsigned short f2NodeLeft  = f1NodeRight;
 	unsigned short f2NodeRight = f1NodeLeft;
 
-	if (!orientationMatch) //if face orientation matches then common edge orientation is opposite
+	if (!orientationMatch) //if face orientation matches then common edge node codes are exchanged
 	{
 		f2NodeLeft  = f1NodeLeft;
 		f2NodeRight = f1NodeRight;
@@ -305,125 +305,3 @@ SPIRID::sGrid::commonEdgeStepupTo(size_t level, unsigned short edgeCode, bool or
 
 
 
-
-void
-SPIRID::sGrid::localMinNodeSearchNextLevel(
-    size_t level,
-    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short),
-    sGrid& refFace,
-    unsigned short& refLocation,
-    scaledFP& refMinValue)
-{
-	std::list<sGrid> neighborFaces(refFace.nodeNeighborFaces(level,refLocation));
-
-	level++;
-	refFace.setExtend(level,refLocation);
-	scaledFP dummyValue = refMinValue;
-	for (std::list<sGrid>::iterator it = neighborFaces.begin(); it != neighborFaces.end(); ++it)
-	{
-		it -> setExtend(level,0);
-		dummyValue = minFunc(level,*it,1);
-		if (dummyValue < refMinValue)
-		{
-			refMinValue = dummyValue;
-			refFace = *it;
-			refLocation = 1;
-		}
-		dummyValue = minFunc(level,*it,2);
-		if (dummyValue < refMinValue)
-		{
-			refMinValue = dummyValue;
-			refFace = *it;
-			refLocation = 2;
-		}
-		dummyValue = minFunc(level,*it,3);
-		if (dummyValue < refMinValue)
-		{
-			refMinValue = dummyValue;
-			refFace = *it;
-			refLocation = 3;
-		}
-	}
-	return;
-}
-void
-SPIRID::sGrid::minNodeSearch(
-    size_t maxLevel,
-    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short),
-    sGrid& resultFace,
-    unsigned short& resultLocation,
-    scaledFP& resultMinValue)
-{
-	resultFace = NorthOct0.first;
-	resultLocation = 3;
-	resultMinValue = minFunc(0, resultFace, resultLocation);
-
-	scaledFP dummyValue = minFunc(0, resultFace, 2);
-	if (dummyValue < resultMinValue)
-	{
-		resultMinValue = dummyValue;
-		resultLocation = 2;
-	}
-	dummyValue = minFunc(0, resultFace, 1);
-	if (dummyValue < resultMinValue)
-	{
-		resultMinValue = dummyValue;
-		resultLocation = 1;
-	}
-
-	dummyValue = minFunc(0, SouthOct7.first, 3);
-	if (dummyValue < resultMinValue)
-	{
-		resultMinValue = dummyValue;
-		resultLocation = 3;
-		resultFace = SouthOct7.first;
-	}
-	dummyValue = minFunc(0, SouthOct7.first, 2);
-	if (dummyValue < resultMinValue)
-	{
-		resultMinValue = dummyValue;
-		resultLocation = 2;
-		resultFace = SouthOct7.first;
-	}
-	dummyValue = minFunc(0, SouthOct7.first, 1);
-	if (dummyValue < resultMinValue)
-	{
-		resultMinValue = dummyValue;
-		resultLocation = 1;
-		resultFace = SouthOct7.first;
-	}
-
-	for (size_t level_it = 0; level_it < maxLevel; ++level_it)
-	{
-		localMinNodeSearchNextLevel(level_it, minFunc, resultFace, resultLocation, resultMinValue);
-	}
-
-	return;
-}
-SPIRID::sGrid
-SPIRID::sGrid::minFaceSearch(
-    size_t maxLevel,
-    scaledFP (*minFunc)(size_t, const sGrid&, unsigned short) )
-{
-    sGrid searchFace;
-    unsigned short searchLocation;
-    scaledFP searchValue;
-    minNodeSearch(maxLevel, minFunc, searchFace, searchLocation, searchValue);
-    
-    std::list<sGrid> neighborFaces(searchFace.nodeNeighborFaces(maxLevel,searchLocation));
-    
-    std::list<sGrid>::iterator it = neighborFaces.begin();
-    scaledFP dummyValue = minFunc(maxLevel, *it, 0);
-    searchValue = dummyValue;
-    ++it;
-    for (; it != neighborFaces.end(); ++it)
-    {
-        dummyValue = minFunc(maxLevel, *it, 0);
-        if (dummyValue < searchValue)
-        {
-            searchFace = *it;
-            searchValue = dummyValue;
-        }
-    }
-    return searchFace;
-}

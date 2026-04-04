@@ -13,7 +13,7 @@ void SPIRID::angle::unitRad() {
 };
 void SPIRID::angle::unitDeg() {
 	unitScale=180/pi;
-	unitSymbol="°";
+	unitSymbol="B0";
 };
 
 /*
@@ -65,8 +65,8 @@ fp_type SPIRID::angle::operator / (const SPIRID::angle & beta) const
 
 std::ostream& SPIRID::operator << (std::ostream& out, const SPIRID::angle& alpha)
 {
-    out << alpha.getMantissa()*angle::unitScale;
-    if(alpha.getExponent() != 0) out << "/2^" << alpha.getExponent();
-    out << angle::unitSymbol;
+	out << alpha.getMantissa()*angle::unitScale;
+	if(alpha.getExponent() != 0) out << "/2^" << alpha.getExponent();
+	out << angle::unitSymbol;
 	return out;
 }

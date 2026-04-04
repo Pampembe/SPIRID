@@ -27,8 +27,8 @@ SPIRID::sGrid::edgeLength(size_t level, unsigned short edgeCode) const
 {
 	faceGeometry faceGeom(calcFaceGeometry(level));
 
-	if (level>=minScaleSinXToX) return angle(SQRT( faceGeom.SinSqE[edgeCode-1] ), level);
-	return angle( LDEXP( ASIN( LDEXP( SQRT(faceGeom.SinSqE[edgeCode-1]), -level) ), level), level );
+	if (level>=minScaleSinXToX) return angle(SQRT( faceGeom[edgeCode] ), level);
+	return angle( LDEXP( ASIN( LDEXP( SQRT(faceGeom[edgeCode]), -level) ), level), level );
 }
 
 //calculate geometry (scaled edge lengths) of the face
@@ -39,7 +39,10 @@ SPIRID::sGrid::calcFaceGeometry(size_t level) const
 	faceGeometry faceGeom({1,1,1});
 	size_t max_level_it = std::min(level,minDepthFlatApprox);
 
-	for (size_t level_it=0; level_it<max_level_it; level_it++) stepupFaceGeometryFrom(level_it, at(level_it+1), faceGeom);
+	for (size_t level_it=0; level_it<max_level_it; level_it++)
+	{
+		stepupFaceGeometryFrom(level_it, at(level_it+1), faceGeom);
+	}
 
 	return faceGeom;
 }
@@ -52,9 +55,9 @@ SPIRID::sGrid::stepupFaceGeometryFrom(
 {
 	scaleExp_type scaleSq = 2*level;
 
-	fp_type SinaSq = faceGeom.SinSqE[0];
-	fp_type SinbSq = faceGeom.SinSqE[1];
-	fp_type SincSq = faceGeom.SinSqE[2];
+	fp_type SinaSq = faceGeom.SinaSq;
+	fp_type SinbSq = faceGeom.SinbSq;
+	fp_type SincSq = faceGeom.SincSq;
 
 	fp_type ScaledSina2Sq = calcEdgeBisection(scaleSq,SinaSq);
 	fp_type ScaledSinb2Sq = calcEdgeBisection(scaleSq,SinbSq);
@@ -64,60 +67,60 @@ SPIRID::sGrid::stepupFaceGeometryFrom(
 	{
 	case 0 :
 	{
-		faceGeom.SinSqE[0] = (        2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 2)
-		                              - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq + ScaledSinc2Sq,-scaleSq) - 6)
-		                              + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq)
-		                     )/
-		                     ((LDEXP(ScaledSinb2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
-		faceGeom.SinSqE[1] = (   - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) + 2)
-		                         - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 6)
-		                         + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq))/
-		                     ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
-		faceGeom.SinSqE[2] = (      2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) - 2)
-		                            - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) + 2)
-		                            + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/
-		                     ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinb2Sq,-scaleSq) - 4));
+		faceGeom.SinaSq = (        2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 2)
+		                           - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq + ScaledSinc2Sq,-scaleSq) - 6)
+		                           + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq)
+		                  )/
+		                  ((LDEXP(ScaledSinb2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
+		faceGeom.SinbSq = (   - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) + 2)
+		                      - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 6)
+		                      + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq))/
+		                  ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
+		faceGeom.SincSq = (      2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) - 2)
+		                         - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) + 2)
+		                         + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/
+		                  ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinb2Sq,-scaleSq) - 4));
 		break;
 	}
 	case 1 :
 	{
 		// 4*SinmaSq == (2*ScaledSinb2Sq*(-2 + ScaledSinc2Sq) - 2*ScaledSina2Sq*(-6 + ScaledSinb2Sq + ScaledSinc2Sq) + 4*(-ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/((-4 + ScaledSinb2Sq)*(-4 + ScaledSinc2Sq))
-		faceGeom.SinSqE[0] = (        2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 2)
-		                              - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq + ScaledSinc2Sq,-scaleSq) - 6)
-		                              + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq)
-		                     )/
-		                     ((LDEXP(ScaledSinb2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
-		faceGeom.SinSqE[1] = ScaledSinb2Sq;
-		faceGeom.SinSqE[2] = ScaledSinc2Sq;
+		faceGeom.SinaSq = (        2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 2)
+		                           - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq + ScaledSinc2Sq,-scaleSq) - 6)
+		                           + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq)
+		                  )/
+		                  ((LDEXP(ScaledSinb2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
+		faceGeom.SinbSq = ScaledSinb2Sq;
+		faceGeom.SincSq = ScaledSinc2Sq;
 		break;
 	}
 	case 2 :
 	{
-		faceGeom.SinSqE[0] = ScaledSina2Sq;
+		faceGeom.SinaSq = ScaledSina2Sq;
 		// 4*SinmbSq == (-2*ScaledSina2Sq*(2 + ScaledSinb2Sq - ScaledSinc2Sq) - 2*ScaledSinb2Sq*(-6 + ScaledSinc2Sq) + 4*(-ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/((-4 + ScaledSina2Sq)*(-4 + ScaledSinc2Sq))
-		faceGeom.SinSqE[1] = (   - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) + 2)
-		                         - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 6)
-		                         + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq))/
-		                     ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
-		faceGeom.SinSqE[2] = ScaledSinc2Sq;
+		faceGeom.SinbSq = (   - 2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) + 2)
+		                      - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 6)
+		                      + 4*(SinaSq + SinbSq + SincSq - ScaledSinc2Sq))/
+		                  ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinc2Sq,-scaleSq) - 4));
+		faceGeom.SincSq = ScaledSinc2Sq;
 		break;
 	}
 	case 3 :
 	{
 		// 4*SinmcSq == (2*ScaledSina2Sq*(-2 + ScaledSinb2Sq - ScaledSinc2Sq) - 2*ScaledSinb2Sq*(2 + ScaledSinc2Sq) + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/((-4 + ScaledSina2Sq)*(-4 + ScaledSinb2Sq))
-		faceGeom.SinSqE[0] = ScaledSina2Sq;
-		faceGeom.SinSqE[1] = ScaledSinb2Sq;
-		faceGeom.SinSqE[2] = (      2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) - 2)
-		                            - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) + 2)
-		                            + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/
-		                     ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinb2Sq,-scaleSq) - 4));
+		faceGeom.SinaSq = ScaledSina2Sq;
+		faceGeom.SinbSq = ScaledSinb2Sq;
+		faceGeom.SincSq = (      2*ScaledSina2Sq*(LDEXP(ScaledSinb2Sq - ScaledSinc2Sq,-scaleSq) - 2)
+		                         - 2*ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) + 2)
+		                         + 4*(3*ScaledSinc2Sq + SinaSq + SinbSq + SincSq))/
+		                  ((LDEXP(ScaledSina2Sq,-scaleSq) - 4)*(LDEXP(ScaledSinb2Sq,-scaleSq) - 4));
 		break;
 	}
 	default:
 	{
-		faceGeom.SinSqE[0] = 0;
-		faceGeom.SinSqE[1] = 0;
-		faceGeom.SinSqE[2] = 0;
+		faceGeom.SinaSq = 0;
+		faceGeom.SinbSq = 0;
+		faceGeom.SincSq = 0;
 		break;
 	}
 	}
@@ -136,23 +139,23 @@ SPIRID::sGrid::interiorAngle(
 	{
 	case 1:
 	{
-		SinaSq = faceGeom.SinSqE[0];
-		SinbSq = faceGeom.SinSqE[1];
-		SincSq = faceGeom.SinSqE[2];
+		SinaSq = faceGeom[1];
+		SinbSq = faceGeom[2];
+		SincSq = faceGeom[3];
 		break;
 	}
 	case 2:
 	{
-		SinaSq = faceGeom.SinSqE[1];
-		SinbSq = faceGeom.SinSqE[0];
-		SincSq = faceGeom.SinSqE[2];
+		SinaSq = faceGeom[2];
+		SinbSq = faceGeom[1];
+		SincSq = faceGeom[3];
 		break;
 	}
 	case 3:
 	{
-		SinaSq = faceGeom.SinSqE[2];
-		SinbSq = faceGeom.SinSqE[0];
-		SincSq = faceGeom.SinSqE[1];
+		SinaSq = faceGeom[3];
+		SinbSq = faceGeom[1];
+		SincSq = faceGeom[2];
 		break;
 	}
 	default:
@@ -189,9 +192,9 @@ SPIRID::angle SPIRID::sGrid::area(size_t level, const faceGeometry& faceGeom)
 {
 	scaleExp_type scaleSq = 2*level;
 
-	fp_type FourSinE1HalfSq = calcEdgeBisection(scaleSq,faceGeom.SinSqE[0]);
-	fp_type FourSinE2HalfSq = calcEdgeBisection(scaleSq,faceGeom.SinSqE[1]);
-	fp_type FourSinE3HalfSq = calcEdgeBisection(scaleSq,faceGeom.SinSqE[2]);
+	fp_type FourSinE1HalfSq = calcEdgeBisection(scaleSq,faceGeom[1]);
+	fp_type FourSinE2HalfSq = calcEdgeBisection(scaleSq,faceGeom[2]);
+	fp_type FourSinE3HalfSq = calcEdgeBisection(scaleSq,faceGeom[3]);
 
 	if (scaleSq>=minScaleSinXToX)
 	{
@@ -403,15 +406,15 @@ SPIRID::sGrid::calcFacePolar(
 		{
 			if (edgeCode == 2)
 			{
-				SinaSq = faceGeom.SinSqE[1];
-				SinbSq = faceGeom.SinSqE[2];
-				SincSq = faceGeom.SinSqE[0];
+				SinaSq = faceGeom[2];
+				SinbSq = faceGeom[3];
+				SincSq = faceGeom[1];
 			}
 			else if (edgeCode == 3)
 			{
-				SinaSq = faceGeom.SinSqE[2];
-				SinbSq = faceGeom.SinSqE[1];
-				SincSq = faceGeom.SinSqE[0];
+				SinaSq = faceGeom[3];
+				SinbSq = faceGeom[2];
+				SincSq = faceGeom[1];
 			}
 			else return {0,0};
 		}
@@ -419,15 +422,15 @@ SPIRID::sGrid::calcFacePolar(
 		{
 			if (edgeCode == 1)
 			{
-				SinaSq = faceGeom.SinSqE[0];
-				SinbSq = faceGeom.SinSqE[2];
-				SincSq = faceGeom.SinSqE[1];
+				SinaSq = faceGeom[1];
+				SinbSq = faceGeom[3];
+				SincSq = faceGeom[2];
 			}
 			else if (edgeCode == 3)
 			{
-				SinaSq = faceGeom.SinSqE[2];
-				SinbSq = faceGeom.SinSqE[0];
-				SincSq = faceGeom.SinSqE[1];
+				SinaSq = faceGeom[3];
+				SinbSq = faceGeom[1];
+				SincSq = faceGeom[2];
 			}
 			else return {0,0};
 		}
@@ -435,15 +438,15 @@ SPIRID::sGrid::calcFacePolar(
 		{
 			if (edgeCode == 1)
 			{
-				SinaSq = faceGeom.SinSqE[0];
-				SinbSq = faceGeom.SinSqE[1];
-				SincSq = faceGeom.SinSqE[2];
+				SinaSq = faceGeom[1];
+				SinbSq = faceGeom[2];
+				SincSq = faceGeom[3];
 			}
 			else if (edgeCode == 2)
 			{
-				SinaSq = faceGeom.SinSqE[1];
-				SinbSq = faceGeom.SinSqE[0];
-				SincSq = faceGeom.SinSqE[2];
+				SinaSq = faceGeom[2];
+				SinbSq = faceGeom[1];
+				SincSq = faceGeom[3];
 			}
 			else return {0,0};
 		}
@@ -504,8 +507,8 @@ SPIRID::sGrid::calcFacePolar(
 			unsigned short otherCode = newCode(edgeCode,nodeCode);
 
 			//relevant edge lengths in the sub-face with code "nodeCode"
-			fp_type SinaSq = calcEdgeBisection(refScale, faceGeom.SinSqE[edgeCode-1])/4;
-			fp_type SinbSq = calcEdgeBisection(refScale, faceGeom.SinSqE[otherCode-1])/4;
+			fp_type SinaSq = calcEdgeBisection(refScale, faceGeom[edgeCode])/4;
+			fp_type SinbSq = calcEdgeBisection(refScale, faceGeom[otherCode])/4;
 
 			//distance and angle to the reference node within the center sub-face
 			inFacePolar subFacePolar(calcFacePolar(nextLevel, edgeCode, nodeCode, newFaceGeom, pointLevel, location));
@@ -513,7 +516,7 @@ SPIRID::sGrid::calcFacePolar(
 			fp_type SineSq = subFacePolar.SinDistSq/4;
 
 			//angle between original reference edge and the connection line between the point and the new reference node inside the center sub-face
-			fp_type delta    = subFacePolar.angle + interiorAngle(refScale,SinaSq,newFaceGeom.SinSqE[nodeCode-1]/4,SinbSq);
+			fp_type delta    = subFacePolar.angle + interiorAngle(refScale,SinaSq,newFaceGeom[nodeCode]/4,SinbSq);
 			fp_type tmpAngle = COS(delta);
 
 			//distance to the original reference node
@@ -531,7 +534,7 @@ SPIRID::sGrid::calcFacePolar(
 			scaleExp_type refScale = 2*refNodeLevel;
 			unsigned short otherCode = newCode(edgeCode,nodeCode);
 
-			fp_type SinaSq = faceGeom.SinSqE[otherCode-1];
+			fp_type SinaSq = faceGeom[otherCode];
 			inFacePolar subFacePolar(calcFacePolar(nextLevel, edgeCode, otherCode, newFaceGeom, pointLevel, location));
 
 			fp_type SinfSq   = subFacePolar.SinDistSq/4;
@@ -547,7 +550,7 @@ SPIRID::sGrid::calcFacePolar(
 			scaleExp_type refScale = 2*refNodeLevel;
 			unsigned short otherCode = newCode(edgeCode,nodeCode);
 
-			fp_type SinaSq = faceGeom.SinSqE[edgeCode-1];
+			fp_type SinaSq = faceGeom[edgeCode];
 			inFacePolar subFacePolar(calcFacePolar(nextLevel, otherCode, edgeCode, newFaceGeom, pointLevel, location));
 
 			fp_type SinfSq    = subFacePolar.SinDistSq/4;
@@ -579,15 +582,15 @@ SPIRID::sGrid::calcFlatFacePolar(
 	{
 		if (edgeCode == 2)
 		{
-			aSq = faceGeom.SinSqE[1];
-			bSq = faceGeom.SinSqE[2];
-			cSq = faceGeom.SinSqE[0];
+			aSq = faceGeom[2];
+			bSq = faceGeom[3];
+			cSq = faceGeom[1];
 		}
 		else if (edgeCode == 3)
 		{
-			aSq = faceGeom.SinSqE[2];
-			bSq = faceGeom.SinSqE[1];
-			cSq = faceGeom.SinSqE[0];
+			aSq = faceGeom[3];
+			bSq = faceGeom[2];
+			cSq = faceGeom[1];
 		}
 		else return {0,0};
 	}
@@ -595,15 +598,15 @@ SPIRID::sGrid::calcFlatFacePolar(
 	{
 		if (edgeCode == 1)
 		{
-			aSq = faceGeom.SinSqE[0];
-			bSq = faceGeom.SinSqE[2];
-			cSq = faceGeom.SinSqE[1];
+			aSq = faceGeom[1];
+			bSq = faceGeom[3];
+			cSq = faceGeom[2];
 		}
 		else if (edgeCode == 3)
 		{
-			aSq = faceGeom.SinSqE[2];
-			bSq = faceGeom.SinSqE[0];
-			cSq = faceGeom.SinSqE[1];
+			aSq = faceGeom[3];
+			bSq = faceGeom[1];
+			cSq = faceGeom[2];
 		}
 		else return {0,0};
 	}
@@ -611,15 +614,15 @@ SPIRID::sGrid::calcFlatFacePolar(
 	{
 		if (edgeCode == 1)
 		{
-			aSq = faceGeom.SinSqE[0];
-			bSq = faceGeom.SinSqE[1];
-			cSq = faceGeom.SinSqE[2];
+			aSq = faceGeom[1];
+			bSq = faceGeom[2];
+			cSq = faceGeom[3];
 		}
 		else if (edgeCode == 2)
 		{
-			aSq = faceGeom.SinSqE[1];
-			bSq = faceGeom.SinSqE[0];
-			cSq = faceGeom.SinSqE[2];
+			aSq = faceGeom[2];
+			bSq = faceGeom[1];
+			cSq = faceGeom[3];
 		}
 		else return {0,0};
 	}
@@ -706,18 +709,18 @@ SPIRID::sGrid::sinDistanceHalf(size_t levelP1, const sGrid& P1, unsigned short l
                                bool& mirror)
 {
 	//start by finding the highest common node for P1 and P2
-	commonNode commonN(findHighestCommonNode(levelP1, P1, levelP2, P2));
+	pointPairRefNode commonN(findHighestRefNode(levelP1, P1, levelP2, P2));
 
-	//if no common node then we calculate the distance to a mirrored point
+	//if no reference node then we calculate the distance to a mirrored point
 	mirror = false;
-	if (commonN.nodeCode1 == 0) //means no common node
+	if (commonN.nodeCode1 == 0) //means no reference node
 	{
 		mirror = true;
 		sGrid P3(P2);
-		commonN = findHighestCommonNode(levelP1, P1, levelP2, P3.mirror());
+		commonN = findHighestRefNode(levelP1, P1, levelP2, P3.mirror());
 	}
 
-	//calculate distance & angle from points to common nodes
+	//calculate distance & angle from points to reference nodes
 	size_t levelN1 = commonN.level1;
 	size_t levelN2 = commonN.level2;
 	inFacePolar localP1(P1.calcFacePolar(levelN1, commonN.nodeCode1, commonN.edgeCode1, levelP1, locationP1));
@@ -725,10 +728,10 @@ SPIRID::sGrid::sinDistanceHalf(size_t levelP1, const sGrid& P1, unsigned short l
 	fp_type SinaSq = localP1.SinDistSq;
 	fp_type SinbSq = localP2.SinDistSq;
 
-	//calculate angle between the connections P1-commonNode-P2
+	//calculate angle between the connections P1-referenceNode-P2
 	fp_type cosGapAngle = COS(localP1.angle + commonN.signAngle2*localP2.angle + commonN.gapAngle);
 
-	//check for level differences (occurs when one of the points is closer to the common node)
+	//check for level differences (occurs when one of the points is closer to the reference node)
 	size_t levelOffset = 0;
 	size_t minLevel = levelN1;
 	if (levelN1>levelN2)
@@ -753,7 +756,7 @@ SPIRID::angle
 SPIRID::sGrid::distance(size_t levelP1, const sGrid& P1, unsigned short locationP1,
                         size_t levelP2, const sGrid& P2, unsigned short locationP2)
 {
-    bool mirror = false;
+	bool mirror = false;
 	scaledFP sinDHalf = sinDistanceHalf(levelP1,P1,locationP1,
 	                                    levelP2,P2,locationP2,
 	                                    mirror);

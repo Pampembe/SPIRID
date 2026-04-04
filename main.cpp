@@ -9,42 +9,62 @@ Code, Compile, Run and Debug online from anywhere in world.
 #include <iostream>
 #include <cmath>
 
+//#define USE_FLOAT
+//#define USE_DOUBLE
+//#define USE_LONG_DOUBLE
+
 #include <SPIRID.h>
 using namespace SPIRID;
+
+//#define DEBUG
+
+class test
+{
+public:
+	scaledFP operator() (size_t level, const sGrid& P, unsigned short location) const
+	{
+		sPolar TP(P.toPolar(level,location));
+//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/5,pi/3)),0);
+//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/8,pi/8)),0);
+		return scaledFP(SQRT((fp_type(TP.getTheta())-pi/8.)*(fp_type(TP.getTheta())-pi/8.) + (fp_type(TP.getPhi())-5*pi/8.)*(fp_type(TP.getPhi())-5*pi/8.)),0);
+
+	};
+};
+
 
 int main()
 {
 	angle::unitPi();
 
 
-	size_t level = 4;
+	size_t level = 5;
 	size_t fullSearchLevel = level;
 	if (level > 5) fullSearchLevel = level-5;
 	else fullSearchLevel = 0;
-//	funcGraphPoint<> F(sGrid::searchMinPoint(level,SPIRID::sGrid::test));
-    sGrid minFace;
-    unsigned short minLocation;
-    scaledFP minValue(0,0);
-    sGrid::minNodeSearch(level,SPIRID::sGrid::test, minFace, minLocation, minValue);
+	sGrid minFace;
+	unsigned short minLocation;
+	scaledFP minValue(0,0);
+	test testFunc;
+//	sGrid::minNodeSearch(level, testFunc, minFace, minLocation, minValue);
+	sGrid::searchMinPoint(level, testFunc, minFace, minLocation, minValue);
 
 	std::cout << std::endl;
-    std::cout << "standard grid minimum search algorithm result:";
+	std::cout << "standard grid minimum search algorithm result:";
 	std::cout << std::endl;
 	std::cout << minFace << minLocation << " - " << minFace.toPolar(level,minLocation) << ": " << minValue << std::endl;
-//	std::cout << F.dPoint.first << F.dPoint.second << " - " << F.dPoint.first.toPolar(level,F.dPoint.second) << ": " << F.fValue << std::endl;
 	std::cout << std::endl;
 
 
-    std::cout << "full grid search inside level " << fullSearchLevel << " face around previous found minimum node at level " << level;
+	std::cout << "full grid search inside level " << fullSearchLevel << " face around previous found minimum node at level " << level;
 	std::cout << std::endl;
 
-/*	sGrid TMP(F.dPoint.first);
-	sGrid TMP2(F.dPoint.first);
-	unsigned short loc2 = F.dPoint.second;
+	/*	sGrid TMP(F.dPoint.first);
+		sGrid TMP2(F.dPoint.first);
+		unsigned short loc2 = F.dPoint.second;
 
-	scaledFP minValue = F.fValue;
-	scaledFP dummy = F.fValue;
-*/
+		scaledFP minValue = F.fValue;
+		scaledFP dummy = F.fValue;
+	*/
 	sGrid TMP(minFace);
 	sGrid TMP2(minFace);
 	unsigned short loc2 = minLocation;
@@ -55,19 +75,19 @@ int main()
 	sGrid::subGridScanner sTMP(TMP.begin(level,fullSearchLevel));
 	while (sTMP != TMP.end())
 	{
-		dummy = sGrid::test(level,*sTMP,1);
+		dummy = testFunc(level,*sTMP,1);
 		if (dummy < minValue) {
 			minValue = dummy;
 			TMP2=*sTMP;
 			loc2=1;
 		};
-		dummy = sGrid::test(level,*sTMP,2);
+		dummy = testFunc(level,*sTMP,2);
 		if (dummy < minValue) {
 			minValue = dummy;
 			TMP2=*sTMP;
 			loc2=2;
 		};
-		dummy = sGrid::test(level,*sTMP,3);
+		dummy = testFunc(level,*sTMP,3);
 		if (dummy < minValue) {
 			minValue = dummy;
 			TMP2=*sTMP;
@@ -76,129 +96,130 @@ int main()
 		++sTMP;
 	}
 	std::cout << TMP2 << loc2 << " minValue: " << minValue << std::endl;
-    std::cout << "node values in the same face: " << std::endl;
-	std::cout << TMP2 << 1 << " Value: " << sGrid::test(level,TMP2,1) << std::endl;
-	std::cout << TMP2 << 2 << " Value: " << sGrid::test(level,TMP2,2) << std::endl;
-	std::cout << TMP2 << 3 << " Value: " << sGrid::test(level,TMP2,3) << std::endl;
-    std::cout << "node values in neighbor faces: " << std::endl;
-	std::cout << TMP2.neighborFace(level,1) << 1 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,1),1) << std::endl;
-	std::cout << TMP2.neighborFace(level,1) << 2 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,1),2) << std::endl;
-	std::cout << TMP2.neighborFace(level,1) << 3 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,1),3) << std::endl;
-	std::cout << TMP2.neighborFace(level,2) << 1 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,2),1) << std::endl;
-	std::cout << TMP2.neighborFace(level,2) << 2 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,2),2) << std::endl;
-	std::cout << TMP2.neighborFace(level,2) << 3 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,2),3) << std::endl;
-	std::cout << TMP2.neighborFace(level,3) << 1 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,3),1) << std::endl;
-	std::cout << TMP2.neighborFace(level,3) << 2 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,3),2) << std::endl;
-	std::cout << TMP2.neighborFace(level,3) << 3 << " Value: " << sGrid::test(level,TMP2.neighborFace(level,3),3) << std::endl;
-
-
-
-
-    level = 0;
-    sGrid X(std::vector<unsigned short>({0}));
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({1});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    level = 1;
-    X = std::vector<unsigned short>({0,3});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,0});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,2});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({1,3});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({1,0});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({1,2});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-
-    level = 3;
-    X = std::vector<unsigned short>({0,3,2,0});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,2,3});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,0,1});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,0,0});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,0,3});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,2,1});
-	std::cout << X << "[1,2,3]: (" << SPIRID::sGrid::test(level,X,1) << ","  << SPIRID::sGrid::test(level,X,2) << "," << SPIRID::sGrid::test(level,X,3) << ")";
-	std::cout << std::endl;
-
-
-
-    X = std::vector<unsigned short>({0,3,2,3,0});
-	std::cout << std::endl;
-	std::cout << X << 3 << ": " << SPIRID::sGrid::test(4,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << SPIRID::sGrid::test(4,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << SPIRID::sGrid::test(4,X,1);
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,2,3});
-	std::cout << X << 3 << ": " << SPIRID::sGrid::test(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << SPIRID::sGrid::test(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << SPIRID::sGrid::test(3,X,1);
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,2,0});
-	std::cout << X << 3 << ": " << SPIRID::sGrid::test(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << SPIRID::sGrid::test(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << SPIRID::sGrid::test(3,X,1);
-	std::cout << std::endl;
-    X = std::vector<unsigned short>({0,3,2,1});
-	std::cout << X << 3 << ": " << SPIRID::sGrid::test(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << SPIRID::sGrid::test(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << SPIRID::sGrid::test(3,X,1);
-	std::cout << std::endl;
-    X = sGrid(std::vector<unsigned short>({0,3,0,1,0}));
-	std::cout << X << 3 << ": " << SPIRID::sGrid::test(4,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << SPIRID::sGrid::test(4,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << SPIRID::sGrid::test(4,X,1);
-	std::cout << std::endl;
-    X = sGrid(std::vector<unsigned short>({0,3,0,1}));
-	std::cout << X << 3 << ": " << SPIRID::sGrid::test(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << SPIRID::sGrid::test(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << SPIRID::sGrid::test(3,X,1);
-	std::cout << std::endl;
-
-
+	std::cout << "node values in the same face: " << std::endl;
+	std::cout << TMP2 << 1 << " Value: " << testFunc(level,TMP2,1) << std::endl;
+	std::cout << TMP2 << 2 << " Value: " << testFunc(level,TMP2,2) << std::endl;
+	std::cout << TMP2 << 3 << " Value: " << testFunc(level,TMP2,3) << std::endl;
+	std::cout << "node values in neighbor faces: " << std::endl;
+	std::cout << TMP2.neighborFace(level,1) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,1),1) << std::endl;
+	std::cout << TMP2.neighborFace(level,1) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,1),2) << std::endl;
+	std::cout << TMP2.neighborFace(level,1) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,1),3) << std::endl;
+	std::cout << TMP2.neighborFace(level,2) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,2),1) << std::endl;
+	std::cout << TMP2.neighborFace(level,2) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,2),2) << std::endl;
+	std::cout << TMP2.neighborFace(level,2) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,2),3) << std::endl;
+	std::cout << TMP2.neighborFace(level,3) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),1) << std::endl;
+	std::cout << TMP2.neighborFace(level,3) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),2) << std::endl;
+	std::cout << TMP2.neighborFace(level,3) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),3) << std::endl;
 
 
 
 
 #ifdef DEBUG
-    std::cout << "generate new sGrid point from sPolar point: " << std::endl;
-    sPolar polarPoint(80*pi/91, 54*pi/41);
-    sGrid polarToGrid(polarPoint);
-    std::cout << "polar: " << polarPoint << " grid: " << polarToGrid << "-" << polarToGrid.toPolar();
-    std::cout << " difference: (" << polarPoint.getTheta()-polarToGrid.toPolar().getTheta();
-    std::cout << "," << polarPoint.getPhi()-polarToGrid.toPolar().getPhi() << ")" << std::endl;
+	level = 0;
+	sGrid X(std::vector<unsigned short>({0}));
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({1});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	level = 1;
+	X = std::vector<unsigned short>({0,3});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,0});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,2});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({1,3});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({1,0});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({1,2});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+
+	level = 3;
+	X = std::vector<unsigned short>({0,3,2,0});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,2,3});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,0,1});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,0,0});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,0,3});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,2,1});
+	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
+	std::cout << std::endl;
+
+
+
+	X = std::vector<unsigned short>({0,3,2,3,0});
+	std::cout << std::endl;
+	std::cout << X << 3 << ": " << testFunc(4,X,3);
+	std::cout << std::endl;
+	std::cout << X << 2 << ": " << testFunc(4,X,2);
+	std::cout << std::endl;
+	std::cout << X << 1 << ": " << testFunc(4,X,1);
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,2,3});
+	std::cout << X << 3 << ": " << testFunc(3,X,3);
+	std::cout << std::endl;
+	std::cout << X << 2 << ": " << testFunc(3,X,2);
+	std::cout << std::endl;
+	std::cout << X << 1 << ": " << testFunc(3,X,1);
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,2,0});
+	std::cout << X << 3 << ": " << testFunc(3,X,3);
+	std::cout << std::endl;
+	std::cout << X << 2 << ": " << testFunc(3,X,2);
+	std::cout << std::endl;
+	std::cout << X << 1 << ": " << testFunc(3,X,1);
+	std::cout << std::endl;
+	X = std::vector<unsigned short>({0,3,2,1});
+	std::cout << X << 3 << ": " << testFunc(3,X,3);
+	std::cout << std::endl;
+	std::cout << X << 2 << ": " << testFunc(3,X,2);
+	std::cout << std::endl;
+	std::cout << X << 1 << ": " << testFunc(3,X,1);
+	std::cout << std::endl;
+	X = sGrid(std::vector<unsigned short>({0,3,0,1,0}));
+	std::cout << X << 3 << ": " << testFunc(4,X,3);
+	std::cout << std::endl;
+	std::cout << X << 2 << ": " << testFunc(4,X,2);
+	std::cout << std::endl;
+	std::cout << X << 1 << ": " << testFunc(4,X,1);
+	std::cout << std::endl;
+	X = sGrid(std::vector<unsigned short>({0,3,0,1}));
+	std::cout << X << 3 << ": " << testFunc(3,X,3);
+	std::cout << std::endl;
+	std::cout << X << 2 << ": " << testFunc(3,X,2);
+	std::cout << std::endl;
+	std::cout << X << 1 << ": " << testFunc(3,X,1);
+	std::cout << std::endl;
+
+
+
+
+
+
+	std::cout << "generate new sGrid point from sPolar point: " << std::endl;
+	sPolar polarPoint(80*pi/91, 54*pi/41);
+	sGrid polarToGrid(polarPoint);
+	std::cout << "polar: " << polarPoint << " grid: " << polarToGrid << "-" << polarToGrid.toPolar();
+	std::cout << " difference: (" << polarPoint.getTheta()-polarToGrid.toPolar().getTheta();
+	std::cout << "," << polarPoint.getPhi()-polarToGrid.toPolar().getPhi() << ")" << std::endl;
+	std::cout << std::endl;
 
 
 
@@ -306,9 +327,9 @@ int main()
 
 	size_t refLevel = 29;
 	std::cout << "high level nodes polar coordinates in flat and spherical geometry: ";
-	std::cout << "{" << F0.calcFaceGeometry(refLevel).SinSqE[0];
-	std::cout << "," << F0.calcFaceGeometry(refLevel).SinSqE[1];
-	std::cout << "," << F0.calcFaceGeometry(refLevel).SinSqE[2] << "}";
+	std::cout << "{" << F0.calcFaceGeometry(refLevel)[1];
+	std::cout << "," << F0.calcFaceGeometry(refLevel)[2];
+	std::cout << "," << F0.calcFaceGeometry(refLevel)[3] << "}";
 	std::cout << std::endl;
 	sGrid::inFacePolar testSpher(F0.calcFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,0));
 	sGrid::inFacePolar testFlat(F0.calcFlatFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,0));
@@ -460,11 +481,11 @@ int main()
 
 	std::cout << "collecting neighbor faces & nodes for special points: ";
 	std::cout << std::endl;
-	std::list<sGrid> starF = sGrid({0,0,0,1,1,1,1}).nodeNeighborFaces(2,2);
-	std::list<std::pair<sGrid, unsigned short> > starN = sGrid({0,0,0,1,1,1,1}).nodeNeighborNodes(2,2);
-	std::list<std::pair<sGrid, unsigned short> > starE = sGrid({0,0,0,1,1,1,1}).nodeConnectedEdges(2,2);
-	std::list<std::pair<sGrid, unsigned short> > starO = sGrid({0,0,0,1,1,1,1}).nodeOuterRingEdges(2,2);
-	std::cout << "Nodes           : ";
+	std::list<sGrid> starF = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeNeighborFaces(2,2);
+	std::list<std::pair<sGrid, unsigned short> > starN = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeNeighborNodes(2,2);
+	std::list<std::pair<sGrid, unsigned short> > starE = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeConnectedEdges(2,2);
+	std::list<std::pair<sGrid, unsigned short> > starO = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeOuterRingEdges(2,2);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,1,1,1,1})) << 2 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -477,11 +498,11 @@ int main()
 	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
 	std::cout << std::endl;
 
-	starF = sGrid({0,0,0,1,1,1,1}).nodeNeighborFaces(2,3);
-	starN = sGrid({0,0,0,1,1,1,1}).nodeNeighborNodes(2,3);
-	starE = sGrid({0,0,0,1,1,1,1}).nodeConnectedEdges(2,3);
-	starO = sGrid({0,0,0,1,1,1,1}).nodeOuterRingEdges(2,3);
-	std::cout << "Nodes           : ";
+	starF = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeNeighborFaces(2,3);
+	starN = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeNeighborNodes(2,3);
+	starE = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeConnectedEdges(2,3);
+	starO = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,1,1,1,1})) << 3 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -494,11 +515,11 @@ int main()
 	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
 	std::cout << std::endl;
 
-	starF = sGrid({0,0,0,0,0,0,1}).nodeNeighborFaces(2,3);
-	starN = sGrid({0,0,0,0,0,0,1}).nodeNeighborNodes(2,3);
-	starE = sGrid({0,0,0,0,0,0,1}).nodeConnectedEdges(2,3);
-	starO = sGrid({0,0,0,0,0,0,1}).nodeOuterRingEdges(2,3);
-	std::cout << "Nodes           : ";
+	starF = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeNeighborFaces(2,3);
+	starN = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeNeighborNodes(2,3);
+	starE = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeConnectedEdges(2,3);
+	starO = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,0,0,0,1})) << 3 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -511,11 +532,11 @@ int main()
 	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
 	std::cout << std::endl;
 
-	starF = sGrid({0,0,0,0,0,0,1}).nodeNeighborFaces(2,2);
-	starN = sGrid({0,0,0,0,0,0,1}).nodeNeighborNodes(2,2);
-	starE = sGrid({0,0,0,0,0,0,1}).nodeConnectedEdges(2,2);
-	starO = sGrid({0,0,0,0,0,0,1}).nodeOuterRingEdges(2,2);
-	std::cout << "Nodes           : ";
+	starF = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeNeighborFaces(2,2);
+	starN = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeNeighborNodes(2,2);
+	starE = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeConnectedEdges(2,2);
+	starO = sGrid(std::vector<bool>({0,0,0,0,0,0,1})).nodeOuterRingEdges(2,2);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,0,0,0,1})) << 2 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -528,11 +549,11 @@ int main()
 	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
 	std::cout << std::endl;
 
-	starF = sGrid({0,0,0,1,0,1,1}).nodeNeighborFaces(2,1);
-	starN = sGrid({0,0,0,1,0,1,1}).nodeNeighborNodes(2,1);
-	starE = sGrid({0,0,0,1,0,1,1}).nodeConnectedEdges(2,1);
-	starO = sGrid({0,0,0,1,0,1,1}).nodeOuterRingEdges(2,1);
-	std::cout << "Nodes           : ";
+	starF = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeNeighborFaces(2,1);
+	starN = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeNeighborNodes(2,1);
+	starE = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeConnectedEdges(2,1);
+	starO = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeOuterRingEdges(2,1);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,1,0,1,1})) << 1 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -545,11 +566,11 @@ int main()
 	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
 	std::cout << std::endl;
 
-	starF = sGrid({0,0,0,1,0,1,1}).nodeNeighborFaces(2,3);
-	starN = sGrid({0,0,0,1,0,1,1}).nodeNeighborNodes(2,3);
-	starE = sGrid({0,0,0,1,0,1,1}).nodeConnectedEdges(2,3);
-	starO = sGrid({0,0,0,1,0,1,1}).nodeOuterRingEdges(2,3);
-	std::cout << "Nodes           : ";
+	starF = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeNeighborFaces(2,3);
+	starN = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeNeighborNodes(2,3);
+	starE = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeConnectedEdges(2,3);
+	starO = sGrid(std::vector<bool>({0,0,0,1,0,1,1})).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,1,0,1,1})) << 3 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -562,11 +583,11 @@ int main()
 	for (std::list<sGrid>::const_iterator it = starF.begin(); it != starF.end(); ++it) std::cout << *it << "  ";
 	std::cout << std::endl;
 
-	starF = sGrid({0,0,0,0,0,1,1}).nodeNeighborFaces(2,3);
-	starN = sGrid({0,0,0,0,0,1,1}).nodeNeighborNodes(2,3);
-	starE = sGrid({0,0,0,0,0,1,1}).nodeConnectedEdges(2,3);
-	starO = sGrid({0,0,0,0,0,1,1}).nodeOuterRingEdges(2,3);
-	std::cout << "Nodes           : ";
+	starF = sGrid(std::vector<bool>({0,0,0,0,0,1,1})).nodeNeighborFaces(2,3);
+	starN = sGrid(std::vector<bool>({0,0,0,0,0,1,1})).nodeNeighborNodes(2,3);
+	starE = sGrid(std::vector<bool>({0,0,0,0,0,1,1})).nodeConnectedEdges(2,3);
+	starO = sGrid(std::vector<bool>({0,0,0,0,0,1,1})).nodeOuterRingEdges(2,3);
+	std::cout << "Nodes           : " << sGrid(std::vector<bool>({0,0,0,0,0,1,1})) << 3 << " ";
 	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = starN.begin(); it != starN.end(); ++it) std::cout << it->first << it->second << " ";
 	std::cout << std::endl;
 	std::cout << "Connected Edges :         ";
@@ -607,32 +628,32 @@ int main()
 	size_t i_max=450;
 	size_t j_max=453;
 
-/*
-        fp_type difference = 0;
-		fp_type max_difference = 0;
-		for (size_t l1=0; l1<5; l1++)
-		{
-			for (size_t l2=0; l2<5; l2++)
+	/*
+	        fp_type difference = 0;
+			fp_type max_difference = 0;
+			for (size_t l1=0; l1<5; l1++)
 			{
-				for (size_t i = 0; i<512; i++)
+				for (size_t l2=0; l2<5; l2++)
 				{
-					for (size_t j = 0; j<512; j++)
+					for (size_t i = 0; i<512; i++)
 					{
-						difference = std::abs(SPIRID::sPolar::distance(Q[i].toPolar(l1),Q[j].toPolar(l2)) - SPIRID::sGrid::distance(l1,Q[i],l2,Q[j]));
-						if (std::isnan(difference)) std::cerr << "nan" << std::endl;
-						if( difference > max_difference)
+						for (size_t j = 0; j<512; j++)
 						{
-							max_difference = difference;
-							i_max = i;
-							j_max = j;
-							l1_max = l1;
-							l2_max = l2;
+							difference = std::abs(SPIRID::sPolar::distance(Q[i].toPolar(l1),Q[j].toPolar(l2)) - SPIRID::sGrid::distance(l1,Q[i],l2,Q[j]));
+							if (std::isnan(difference)) std::cerr << "nan" << std::endl;
+							if( difference > max_difference)
+							{
+								max_difference = difference;
+								i_max = i;
+								j_max = j;
+								l1_max = l1;
+								l2_max = l2;
+							}
 						}
 					}
 				}
 			}
-		}
-*/	
+	*/
 
 	std::cout << "(" << l1_max << "," << l2_max << ")";
 	std::cout << "(" << i_max << "," << j_max << "): ";

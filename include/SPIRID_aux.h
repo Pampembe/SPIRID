@@ -1,9 +1,10 @@
-#ifndef SPIRID_AUX_H
-#define SPIRID_AUX_H
+#ifndef SPIRID_AUX_H_INCLUDED
+#define SPIRID_AUX_H_INCLUDED
 
 #include <ostream>
 #include <cmath> //for standard math functions and to define constants related to pi
 #include <algorithm>
+
 
 #define fp_type float //standard floating point type for calculations
 #define SQRT sqrtf //sqrt for float numbers
@@ -69,7 +70,6 @@ public:
 
 	inline bool operator < (const scaledFP& y) const
 	{
-		scaleExp_type minExp = std::min(y.scaleExponent,scaleExponent);
 		if (y.scaleExponent > scaleExponent)
 		{
 			return (LDEXP(mantissa,-(y.scaleExponent-scaleExponent)) < y.mantissa);
@@ -133,5 +133,4 @@ std::ostream& operator << (std::ostream& out, const sPolar&);
 
 }
 
-#endif //SPIRID_AUX_H
-
+#endif //SPIRID_AUX_H_INCLUDED
