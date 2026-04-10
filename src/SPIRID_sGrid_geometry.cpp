@@ -22,13 +22,13 @@ void SPIRID::sGrid::setAccuracyBits(size_t bitCount)
 
 
 //calculate length of one edge of a face
-SPIRID::angle
+SPIRID::scaledFP
 SPIRID::sGrid::edgeLength(size_t level, unsigned short edgeCode) const
 {
 	faceGeometry faceGeom(calcFaceGeometry(level));
 
-	if (level>=minScaleSinXToX) return angle(SQRT( faceGeom[edgeCode] ), level);
-	return angle( LDEXP( ASIN( LDEXP( SQRT(faceGeom[edgeCode]), -level) ), level), level );
+	if (level>=minScaleSinXToX) return scaledFP(SQRT( faceGeom[edgeCode] ), level);
+	return scaledFP( LDEXP( ASIN( LDEXP( SQRT(faceGeom[edgeCode]), -level) ), level), level );
 }
 
 //calculate geometry (scaled edge lengths) of the face
@@ -188,7 +188,7 @@ fp_type SPIRID::sGrid::interiorAngle(
 }
 
 //calculate area of a face
-SPIRID::angle SPIRID::sGrid::area(size_t level, const faceGeometry& faceGeom)
+SPIRID::scaledFP SPIRID::sGrid::area(size_t level, const faceGeometry& faceGeom)
 {
 	scaleExp_type scaleSq = 2*level;
 
@@ -198,9 +198,9 @@ SPIRID::angle SPIRID::sGrid::area(size_t level, const faceGeometry& faceGeom)
 
 	if (scaleSq>=minScaleSinXToX)
 	{
-		return angle(LDEXP(SQRT( sinSqQuarterArea(level, FourSinE1HalfSq, FourSinE2HalfSq, FourSinE3HalfSq) ),2),scaleSq);
+		return scaledFP(LDEXP(SQRT( sinSqQuarterArea(level, FourSinE1HalfSq, FourSinE2HalfSq, FourSinE3HalfSq) ),2),scaleSq);
 	}
-	return angle(LDEXP(ASIN(LDEXP(SQRT(sinSqQuarterArea(level, FourSinE1HalfSq, FourSinE2HalfSq, FourSinE3HalfSq)),-scaleSq)), scaleSq+2), scaleSq);
+	return scaledFP(LDEXP(ASIN(LDEXP(SQRT(sinSqQuarterArea(level, FourSinE1HalfSq, FourSinE2HalfSq, FourSinE3HalfSq)),-scaleSq)), scaleSq+2), scaleSq);
 }
 //calculate area of a triangle given edge lengths E in terms of 4*Sin(E/2)^2
 fp_type
@@ -752,7 +752,7 @@ SPIRID::sGrid::sinDistanceHalf(size_t levelP1, const sGrid& P1, unsigned short l
 	return scaledFP(interimResult, minLevel);
 }
 //distance calculation for points: return value is the actual distance in [0,pi]
-SPIRID::angle
+SPIRID::scaledFP
 SPIRID::sGrid::distance(size_t levelP1, const sGrid& P1, unsigned short locationP1,
                         size_t levelP2, const sGrid& P2, unsigned short locationP2)
 {
@@ -785,5 +785,5 @@ SPIRID::sGrid::distance(size_t levelP1, const sGrid& P1, unsigned short location
 		}
 	}
 
-	return angle(interimResult, level);
+	return scaledFP(interimResult, level);
 }

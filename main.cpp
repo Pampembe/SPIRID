@@ -6,6 +6,7 @@ C#, OCaml, VB, Swift, Pascal, Fortran, Haskell, Objective-C, Assembly, HTML, CSS
 Code, Compile, Run and Debug online from anywhere in world.
 
 *******************************************************************************/
+#include <cstdlib>
 #include <iostream>
 #include <cmath>
 
@@ -16,7 +17,7 @@ Code, Compile, Run and Debug online from anywhere in world.
 #include <SPIRID.h>
 using namespace SPIRID;
 
-//#define DEBUG
+#define DEBUG
 
 class test
 {
@@ -25,51 +26,56 @@ public:
 	{
 		sPolar TP(P.toPolar(level,location));
 //		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/5,pi/3)),0);
-//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/8,pi/8)),0);
-		return scaledFP(SQRT((fp_type(TP.getTheta())-pi/8.)*(fp_type(TP.getTheta())-pi/8.) + (fp_type(TP.getPhi())-5*pi/8.)*(fp_type(TP.getPhi())-5*pi/8.)),0);
-
+//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/8,5*pi/8)),0);
+		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(80*pi/91,54*pi/41)),0);
+//		return scaledFP(SQRT((fp_type(TP.getTheta())-pi/8.)*(fp_type(TP.getTheta())-pi/8.) + (fp_type(TP.getPhi())-5*pi/8.)*(fp_type(TP.getPhi())-5*pi/8.)),0);
 	};
 };
 
 
 int main()
 {
-	angle::unitPi();
+    angle::unitDeg();
 
 
-	size_t level = 5;
+	size_t level = 24;
 	size_t fullSearchLevel = level;
 	if (level > 5) fullSearchLevel = level-5;
 	else fullSearchLevel = 0;
+
 	sGrid minFace;
 	unsigned short minLocation;
 	scaledFP minValue(0,0);
 	test testFunc;
-//	sGrid::minNodeSearch(level, testFunc, minFace, minLocation, minValue);
-	sGrid::searchMinPoint(level, testFunc, minFace, minLocation, minValue);
+	unsigned short minEdge = 1;
+//	minValue = sGrid::minNodeSearch(testFunc, level, minFace, minLocation);
+//	sGrid::searchMinPoint(testFunc, level, minFace, minLocation, minValue);
+	sGrid::fastMinEdgeSearch(testFunc, 0, level, minFace, minLocation, minEdge, minValue);
+	scaledFP minValue2 = testFunc(level, minFace, sGrid::otherNodeCode(minEdge, minLocation));
+
 
 	std::cout << std::endl;
-	std::cout << "standard grid minimum search algorithm result:";
+	std::cout << "grid minimum search algorithm result: ";
 	std::cout << std::endl;
-	std::cout << minFace << minLocation << " - " << minFace.toPolar(level,minLocation) << ": " << minValue << std::endl;
+	std::cout << minFace << minLocation << "," << minEdge << " - " << minFace.toPolar(level,minLocation) << ": " << minValue;
+	std::cout << " -- " << sGrid::otherNodeCode(minEdge, minLocation) << " - " << minFace.toPolar(level,sGrid::otherNodeCode(minEdge, minLocation)) << ": " << minValue2;
+	std::cout << std::endl;
+	std::cout << "node values of adjacent nodes: " << std::endl;
+	std::list<std::pair<sGrid, unsigned short> > minFaceNeighborNodes = minFace.nodeNeighborNodes(level, minLocation);
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = minFaceNeighborNodes.begin(); it != minFaceNeighborNodes.end(); ++it)
+	{
+		std::cout << it->first << it->second << " Value: " << testFunc(level, it->first, it->second) << " - " << it->first.toPolar(level,it->second) << std::endl;
+	}
 	std::cout << std::endl;
 
 
 	std::cout << "full grid search inside level " << fullSearchLevel << " face around previous found minimum node at level " << level;
 	std::cout << std::endl;
 
-	/*	sGrid TMP(F.dPoint.first);
-		sGrid TMP2(F.dPoint.first);
-		unsigned short loc2 = F.dPoint.second;
-
-		scaledFP minValue = F.fValue;
-		scaledFP dummy = F.fValue;
-	*/
 	sGrid TMP(minFace);
 	sGrid TMP2(minFace);
-	unsigned short loc2 = minLocation;
+	unsigned short loc = minLocation;
 
-//	scaledFP minValue = minValue;
 	scaledFP dummy = minValue;
 
 	sGrid::subGridScanner sTMP(TMP.begin(level,fullSearchLevel));
@@ -79,23 +85,30 @@ int main()
 		if (dummy < minValue) {
 			minValue = dummy;
 			TMP2=*sTMP;
-			loc2=1;
+			loc=1;
 		};
 		dummy = testFunc(level,*sTMP,2);
 		if (dummy < minValue) {
 			minValue = dummy;
 			TMP2=*sTMP;
-			loc2=2;
+			loc=2;
 		};
 		dummy = testFunc(level,*sTMP,3);
 		if (dummy < minValue) {
 			minValue = dummy;
 			TMP2=*sTMP;
-			loc2=3;
+			loc=3;
 		};
 		++sTMP;
 	}
-	std::cout << TMP2 << loc2 << " minValue: " << minValue << std::endl;
+	std::cout << TMP2 << loc << " minValue: " << minValue << " - " << TMP2.toPolar(level,loc) << std::endl;
+
+	std::cout << "node values of adjacent nodes: " << std::endl;
+	std::list<std::pair<sGrid, unsigned short> > TMP2neighborNodes = TMP2.nodeNeighborNodes(level, loc);
+	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = TMP2neighborNodes.begin(); it != TMP2neighborNodes.end(); ++it)
+	{
+		std::cout << it->first << it->second << " Value: " << testFunc(level, it->first, it->second) << " - " << it->first.toPolar(level,it->second) << std::endl;
+	}
 	std::cout << "node values in the same face: " << std::endl;
 	std::cout << TMP2 << 1 << " Value: " << testFunc(level,TMP2,1) << std::endl;
 	std::cout << TMP2 << 2 << " Value: " << testFunc(level,TMP2,2) << std::endl;
@@ -110,118 +123,68 @@ int main()
 	std::cout << TMP2.neighborFace(level,3) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),1) << std::endl;
 	std::cout << TMP2.neighborFace(level,3) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),2) << std::endl;
 	std::cout << TMP2.neighborFace(level,3) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),3) << std::endl;
+	std::cout << std::endl;
 
 
+
+
+
+	std::cout << "generate new sGrid points from sPolar point - single point, arbitrary coordinates: " << std::endl;
+	fp_type theta = 80*pi/91;
+	fp_type phi = 54*pi/41;
+	fp_type maxDifference = 0;
+
+	sPolar polarPoint(theta, phi);
+	sGrid polarToGrid(polarPoint, sGrid::getAccuracyBits(), sGrid::fastMinSearch<sGrid::polarDistanceToRef>);
+	sPolar polarPointMax(theta, phi);
+	sGrid polarToGridMax(polarToGrid);
+
+	if ( maxDifference < sPolar::distance(polarPoint,polarToGrid.toPolar()) )
+    {
+        maxDifference = sPolar::distance(polarPoint,polarToGrid.toPolar());
+        polarPointMax = polarPoint;
+        polarToGridMax = polarToGrid;
+    }
+
+	std::cout << "polar: " << polarPoint << " grid: " << polarToGrid << "-" << polarToGrid.toPolar();
+	std::cout << " difference: (" << polarPoint.getTheta()-polarToGrid.toPolar().getTheta();
+	std::cout << "," << polarPoint.getPhi()-polarToGrid.toPolar().getPhi() << ")";
+	std::cout << "," << sPolar::distance(polarPoint,polarToGrid.toPolar()) << std::endl;
+	std::cout << std::endl;
+
+	level = sGrid::getAccuracyBits();
+	level = 16;
+
+	size_t pointCount = 1000;
+	std::cout << "generate " << pointCount << " new sGrid points from sPolar point - random coordinates" << std::endl;
+	for (size_t it = 0; it < pointCount; ++it)
+    {
+        polarPoint = sPolar(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);
+        polarToGrid = sGrid(polarPoint, level, sGrid::fastMinSearch<sGrid::polarDistanceToRef>);
+
+        if ( maxDifference < sPolar::distance(polarPoint,polarToGrid.toPolar()) )
+        {
+            maxDifference = sPolar::distance(polarPoint,polarToGrid.toPolar());
+            polarPointMax = polarPoint;
+            polarToGridMax = polarToGrid;
+        }
+    }
+	std::cout << "sGrid point with highest difference using fastMinSearch: " << std::endl;
+	std::cout << "polar: " << polarPointMax << " grid: " << polarToGridMax << "-" << polarToGridMax.toPolar();
+	std::cout << " difference: (" << polarPointMax.getTheta()-polarToGridMax.toPolar().getTheta();
+	std::cout << "," << polarPointMax.getPhi()-polarToGridMax.toPolar().getPhi() << ")";
+	std::cout << "," << sPolar::distance(polarPointMax,polarToGridMax.toPolar()) << std::endl;
+
+	std::cout << "previous polar coordinates converted to sGrid using standard robust search: " << std::endl;
+	polarToGrid = sGrid(polarPointMax, level, sGrid::minSearch<sGrid::polarDistanceToRef>);
+	std::cout << "polar: " << polarPointMax << " grid: " << polarToGrid << "-" << polarToGrid.toPolar();
+	std::cout << " difference: (" << polarPointMax.getTheta()-polarToGrid.toPolar().getTheta();
+	std::cout << "," << polarPointMax.getPhi()-polarToGrid.toPolar().getPhi() << ")";
+	std::cout << "," << sPolar::distance(polarPointMax,polarToGrid.toPolar()) << std::endl;
+	std::cout << std::endl;
 
 
 #ifdef DEBUG
-	level = 0;
-	sGrid X(std::vector<unsigned short>({0}));
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({1});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	level = 1;
-	X = std::vector<unsigned short>({0,3});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,0});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,2});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({1,3});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({1,0});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({1,2});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-
-	level = 3;
-	X = std::vector<unsigned short>({0,3,2,0});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,2,3});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,0,1});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,0,0});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,0,3});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,2,1});
-	std::cout << X << "[1,2,3]: (" << testFunc(level,X,1) << ","  << testFunc(level,X,2) << "," << testFunc(level,X,3) << ")";
-	std::cout << std::endl;
-
-
-
-	X = std::vector<unsigned short>({0,3,2,3,0});
-	std::cout << std::endl;
-	std::cout << X << 3 << ": " << testFunc(4,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << testFunc(4,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << testFunc(4,X,1);
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,2,3});
-	std::cout << X << 3 << ": " << testFunc(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << testFunc(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << testFunc(3,X,1);
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,2,0});
-	std::cout << X << 3 << ": " << testFunc(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << testFunc(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << testFunc(3,X,1);
-	std::cout << std::endl;
-	X = std::vector<unsigned short>({0,3,2,1});
-	std::cout << X << 3 << ": " << testFunc(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << testFunc(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << testFunc(3,X,1);
-	std::cout << std::endl;
-	X = sGrid(std::vector<unsigned short>({0,3,0,1,0}));
-	std::cout << X << 3 << ": " << testFunc(4,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << testFunc(4,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << testFunc(4,X,1);
-	std::cout << std::endl;
-	X = sGrid(std::vector<unsigned short>({0,3,0,1}));
-	std::cout << X << 3 << ": " << testFunc(3,X,3);
-	std::cout << std::endl;
-	std::cout << X << 2 << ": " << testFunc(3,X,2);
-	std::cout << std::endl;
-	std::cout << X << 1 << ": " << testFunc(3,X,1);
-	std::cout << std::endl;
-
-
-
-
-
-
-	std::cout << "generate new sGrid point from sPolar point: " << std::endl;
-	sPolar polarPoint(80*pi/91, 54*pi/41);
-	sGrid polarToGrid(polarPoint);
-	std::cout << "polar: " << polarPoint << " grid: " << polarToGrid << "-" << polarToGrid.toPolar();
-	std::cout << " difference: (" << polarPoint.getTheta()-polarToGrid.toPolar().getTheta();
-	std::cout << "," << polarPoint.getPhi()-polarToGrid.toPolar().getPhi() << ")" << std::endl;
-	std::cout << std::endl;
-
-
 
 	std::cout << "checking polar coordinates in Octant0: ";
 	std::cout << std::endl;

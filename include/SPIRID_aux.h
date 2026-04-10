@@ -87,12 +87,18 @@ std::ostream& operator << (std::ostream& out, const scaledFP&);
 
 
 
-//class angle: automatically converts to a given unit (Rad/Deg/Pi) on output
-class angle : public scaledFP
+//class angle: automatically converts a number to a given unit (Rad/Deg/Pi) on output
+class angle
 {
 
 public:
-	inline angle(fp_type m, scaleExp_type e = 0) : scaledFP(m,e) {}; //standard constructor
+/*
+    template<typename number>
+	inline angle(number n) : X(n) {}; //standard constructor
+	inline operator number() const {return X;}; // convert to number
+*/
+    template<typename number>
+    inline static number convertFromRadian(number X) {return X*unitScale;};
 
 	static fp_type unitScale; // to convert radians/deg/...: radian-->unitScale=1; deg-->unitScale=180/Pi
 	static std::string unitSymbol; //after switching unit the output functions adds a symbol
@@ -103,8 +109,15 @@ public:
 	static void unitDeg();
 };
 //output for anlge
-std::ostream& operator << (std::ostream& out, const angle&);
-
+/*
+template<typename number>
+std::ostream& SPIRID::operator << (std::ostream& out, const SPIRID::angle<number>& alpha)
+{
+	out << alpha * angle<number>::unitScale;
+	out << angle<number>::unitSymbol;
+	return out;
+}
+*/
 
 
 //polar coordinates of the sphere (polar and azimuthal angle, radius==1)
@@ -119,17 +132,18 @@ public:
 		normalize();
 	};
 	const sPolar& set(fp_type t, fp_type p);
-	inline angle getTheta() const {
-		return angle(theta,0);
+	inline fp_type getTheta() const {
+		return theta;
 	};
-	inline angle getPhi() const {
-		return angle(phi,0);
+	inline fp_type getPhi() const {
+		return phi;
 	};
 
-	static angle distance(const sPolar& P1, const sPolar& P2);
+	static fp_type distance(const sPolar& P1, const sPolar& P2);
 };
 //output for polar coordinates
 std::ostream& operator << (std::ostream& out, const sPolar&);
+
 
 }
 

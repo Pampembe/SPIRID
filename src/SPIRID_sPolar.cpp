@@ -24,7 +24,7 @@ void SPIRID::sPolar::normalize()
 }
 
 //haversine formula
-SPIRID::angle SPIRID::sPolar::distance(const sPolar& P1, const sPolar& P2)
+fp_type SPIRID::sPolar::distance(const sPolar& P1, const sPolar& P2)
 {
 	fp_type sinDeltaThetaHalf  = SIN((P1.theta - P2.theta)/2);
 	fp_type sinDeltaPhiHalf    = SIN((P1.phi   - P2.phi  )/2);
@@ -42,12 +42,12 @@ SPIRID::angle SPIRID::sPolar::distance(const sPolar& P1, const sPolar& P2)
 	fp_type distance = 2*ASIN(SQRT(sinDeltaThetaHalf*sinDeltaThetaHalf + sinDeltaPhiHalf*sinDeltaPhiHalf*(sinTheta1plus2Half*sinTheta1plus2Half-sinDeltaThetaHalf*sinDeltaThetaHalf)));
 	if (mirror) distance = pi-distance;
 
-	return angle(distance);
+	return distance;
 }
 
 
 std::ostream& SPIRID::operator << (std::ostream& out, const sPolar& P)
 {
-	out << "(" << P.getTheta() << "," << P.getPhi() << ")";
+	out << "(" << angle::convertFromRadian(P.getTheta()) << angle::unitSymbol << "," << angle::convertFromRadian(P.getPhi()) << angle::unitSymbol << ")";
 	return out;
 }
