@@ -131,6 +131,8 @@ public:
 	inline sPolar(fp_type t, fp_type p) : theta(t), phi(p) {
 		normalize();
 	};
+	inline sPolar(const sPolar& Q) : theta(Q.theta), phi(Q.phi) {};
+	inline sPolar() : theta(0), phi(0) {};
 	const sPolar& set(fp_type t, fp_type p);
 	inline fp_type getTheta() const {
 		return theta;
