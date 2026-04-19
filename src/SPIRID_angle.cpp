@@ -13,5 +13,8 @@ void SPIRID::angle::unitRad() {
 };
 void SPIRID::angle::unitDeg() {
 	unitScale=180/pi;
-	unitSymbol="\u00B0";
+//	unitSymbol="\xB0";
+	unitSymbol="\302\260";
+//	unitSymbol="\u00B0";
+// windows cmd check: system("chcp 65001")
 };

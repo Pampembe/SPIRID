@@ -10,27 +10,31 @@
 #define SQRT sqrtf //sqrt for float numbers
 #define ACOS acosf //acos for float numbers
 #define ASIN asinf //asin for float numbers
+#define ATAN atanf //atan for float numbers
 #define SIN  sinf //sin for float numbers
 #define COS  cosf //cos for float numbers
+#define SIGN  signf //cos for float numbers
 #define LDEXP ldexpf //multiply float by 2^exp
 #define ABS std::abs
 /*
 #define fp_type double //standard floating point type for calculations
-#define SQRT sqrt //sqrt for float numbers
-#define ACOS acos //acos for float numbers
-#define ASIN asin //asin for float numbers
-#define SIN  sin //sin for float numbers
-#define COS  cos //cos for float numbers
-#define LDEXP ldexp //multiply float by 2^exp
+#define SQRT sqrt //sqrt for double numbers
+#define ACOS acos //acos for double numbers
+#define ASIN asin //asin for double numbers
+#define ATAN atan //atan for double numbers
+#define SIN  sin //sin for double numbers
+#define COS  cos //cos for double numbers
+#define LDEXP ldexp //multiply double by 2^exp
 #define ABS std::abs
 
 #define fp_type long double //standard floating point type for calculations
-#define SQRT sqrtl //sqrt for float numbers
-#define ACOS acosl //acos for float numbers
-#define ASIN asinl //asin for float numbers
-#define SIN  sinl //sin for float numbers
-#define COS  cosl //cos for float numbers
-#define LDEXP ldexpl //multiply float by 2^exp
+#define SQRT sqrtl //sqrt for long double numbers
+#define ACOS acosl //acos for long double numbers
+#define ASIN asinl //asin for long double numbers
+#define ATAN atanl //atan for long double numbers
+#define SIN  sinl //sin for long double numbers
+#define COS  cosl //cos for long double numbers
+#define LDEXP ldexpl //multiply long double by 2^exp
 #define ABS std::abs
 */
 
@@ -72,15 +76,27 @@ public:
 	{
 		if (y.scaleExponent > scaleExponent)
 		{
-			return (LDEXP(mantissa,-(y.scaleExponent-scaleExponent)) < y.mantissa);
+			return (LDEXP(mantissa,y.scaleExponent-scaleExponent) < y.mantissa);
 		}
-		return (mantissa < LDEXP(y.mantissa,-(scaleExponent-y.scaleExponent)));
+		return (mantissa < LDEXP(y.mantissa,scaleExponent-y.scaleExponent));
+	}
+	inline bool operator > (const scaledFP& y) const {return !(operator < (y));};
+	inline bool operator != (const scaledFP& y) const
+	{
+		if (y.scaleExponent > scaleExponent)
+		{
+			return (LDEXP(mantissa,y.scaleExponent-scaleExponent) != y.mantissa);
+		}
+		return (mantissa != LDEXP(y.mantissa,scaleExponent-y.scaleExponent));
 	}
 
-//	scaledFP operator + (const scaledFP&) const;
+	scaledFP operator + (const scaledFP&) const;
 	scaledFP operator - (const scaledFP&) const;
+	scaledFP operator * (const scaledFP&) const;
+	scaledFP operator / (const scaledFP&) const;
 
-	operator fp_type() const; //convert to standard float
+    scaledFP abs() const;
+	fp_type toFPType() const; //convert to standard float
 };
 //standard output for scaledFP
 std::ostream& operator << (std::ostream& out, const scaledFP&);
@@ -142,6 +158,18 @@ public:
 	};
 
 	static fp_type distance(const sPolar& P1, const sPolar& P2);
+	static unsigned short orientation(
+	    const sPolar& P,
+	    const sPolar& Q,
+	    const sPolar& R);
+	static fp_type orientedArea(
+	    const sPolar& P,
+	    const sPolar& Q,
+	    const sPolar& R);
+	static fp_type angle(
+	    const sPolar& P,
+	    const sPolar& Q,
+	    const sPolar& R);
 };
 //output for polar coordinates
 std::ostream& operator << (std::ostream& out, const sPolar&);

@@ -11,25 +11,25 @@ Code, Compile, Run and Debug online from anywhere in world.
 #include <chrono>
 #include <cmath>
 
-//#define USE_FLOAT
-//#define USE_DOUBLE
-//#define USE_LONG_DOUBLE
-
 #include <SPIRID.h>
 using namespace SPIRID;
 
-//#define DEBUG
+//#define MIN_SEARCH_CHECK
+//#define DISTANCE_ERROR_CHECK
+//#define GRID_NEIGHBOR_CHECK
+//#define FACE_GEOMETRY_CHECK
+//#define TO_POLAR_CHECK
 
-class test
+class refPointTestFunction
 {
+	sPolar refPoint;
 public:
+	refPointTestFunction(const sPolar& P) : refPoint(P) {};
 	scaledFP operator() (size_t level, const sGrid& P, unsigned short location) const
 	{
 		sPolar TP(P.toPolar(level,location));
-//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/5,pi/3)),0);
-//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(pi/8,5*pi/8)),0);
-//		return scaledFP(sPolar::distance(P.toPolar(level,location),sPolar(80*pi/91,54*pi/41)),0);
-		return scaledFP(SQRT((fp_type(TP.getTheta())-pi/8.)*(fp_type(TP.getTheta())-pi/8.) + (fp_type(TP.getPhi())-5*pi/8.)*(fp_type(TP.getPhi())-5*pi/8.)),0);
+		return scaledFP(SQRT((TP.getTheta()-refPoint.getTheta())*(TP.getTheta()-refPoint.getTheta())
+		                     + (TP.getPhi()-refPoint.getPhi())*(TP.getPhi()-refPoint.getPhi())),0);
 	};
 };
 
@@ -37,271 +37,392 @@ public:
 int main()
 {
 	angle::unitDeg();
+	size_t level = sGrid::getAccuracyBits();
 
+#ifdef MIN_SEARCH_CHECK
 
-	size_t level = 4;
-	size_t fullSearchLevel = level;
-	if (level > 5) fullSearchLevel = level-5;
-	else fullSearchLevel = 0;
-
-	sGrid minFace;
-	unsigned short minLocation;
-	scaledFP minValue(0,0);
-	test testFunc;
-	unsigned short minEdge = 1;
-//	minValue = sGrid::minNodeSearch(testFunc, level, minFace, minLocation);
-//	sGrid::searchMinPoint(testFunc, level, minFace, minLocation, minValue);
-	sGrid::fastMinEdgeSearch(testFunc, 0, level, minFace, minLocation, minEdge, minValue);
-	scaledFP minValue2 = testFunc(level, minFace, sGrid::otherNodeCode(minEdge, minLocation));
-
-
-	std::cout << std::endl;
-	std::cout << "grid minimum search algorithm result: ";
-	std::cout << std::endl;
-	std::cout << minFace << minLocation << "," << minEdge << " - " << minFace.toPolar(level,minLocation) << ": " << minValue;
-	std::cout << " -- " << sGrid::otherNodeCode(minEdge, minLocation) << " - " << minFace.toPolar(level,sGrid::otherNodeCode(minEdge, minLocation)) << ": " << minValue2;
-	std::cout << std::endl;
-	std::cout << "node values of adjacent nodes: " << std::endl;
-	std::list<std::pair<sGrid, unsigned short> > minFaceNeighborNodes = minFace.nodeNeighborNodes(level, minLocation);
-	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = minFaceNeighborNodes.begin(); it != minFaceNeighborNodes.end(); ++it)
-	{
-		std::cout << it->first << it->second << " Value: " << testFunc(level, it->first, it->second) << " - " << it->first.toPolar(level,it->second) << std::endl;
-	}
-	std::cout << std::endl;
-
-
-	std::cout << "full grid search inside level " << fullSearchLevel << " face around previous found minimum node at level " << level;
-	std::cout << std::endl;
-
-	sGrid TMP(minFace);
-	sGrid TMP2(minFace);
-	unsigned short loc = minLocation;
-
-	scaledFP dummy = minValue;
-
-	sGrid::subGridScanner sTMP(TMP.begin(level,fullSearchLevel));
-	while (sTMP != TMP.end())
-	{
-		dummy = testFunc(level,*sTMP,1);
-		if (dummy < minValue) {
-			minValue = dummy;
-			TMP2=*sTMP;
-			loc=1;
-		};
-		dummy = testFunc(level,*sTMP,2);
-		if (dummy < minValue) {
-			minValue = dummy;
-			TMP2=*sTMP;
-			loc=2;
-		};
-		dummy = testFunc(level,*sTMP,3);
-		if (dummy < minValue) {
-			minValue = dummy;
-			TMP2=*sTMP;
-			loc=3;
-		};
-		++sTMP;
-	}
-	std::cout << TMP2 << loc << " minValue: " << minValue << " - " << TMP2.toPolar(level,loc) << std::endl;
-
-	std::cout << "node values of adjacent nodes: " << std::endl;
-	std::list<std::pair<sGrid, unsigned short> > TMP2neighborNodes = TMP2.nodeNeighborNodes(level, loc);
-	for (std::list<std::pair<sGrid, unsigned short> >::const_iterator it = TMP2neighborNodes.begin(); it != TMP2neighborNodes.end(); ++it)
-	{
-		std::cout << it->first << it->second << " Value: " << testFunc(level, it->first, it->second) << " - " << it->first.toPolar(level,it->second) << std::endl;
-	}
-	std::cout << "node values in the same face: " << std::endl;
-	std::cout << TMP2 << 1 << " Value: " << testFunc(level,TMP2,1) << std::endl;
-	std::cout << TMP2 << 2 << " Value: " << testFunc(level,TMP2,2) << std::endl;
-	std::cout << TMP2 << 3 << " Value: " << testFunc(level,TMP2,3) << std::endl;
-	std::cout << "node values in neighbor faces: " << std::endl;
-	std::cout << TMP2.neighborFace(level,1) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,1),1) << std::endl;
-	std::cout << TMP2.neighborFace(level,1) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,1),2) << std::endl;
-	std::cout << TMP2.neighborFace(level,1) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,1),3) << std::endl;
-	std::cout << TMP2.neighborFace(level,2) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,2),1) << std::endl;
-	std::cout << TMP2.neighborFace(level,2) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,2),2) << std::endl;
-	std::cout << TMP2.neighborFace(level,2) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,2),3) << std::endl;
-	std::cout << TMP2.neighborFace(level,3) << 1 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),1) << std::endl;
-	std::cout << TMP2.neighborFace(level,3) << 2 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),2) << std::endl;
-	std::cout << TMP2.neighborFace(level,3) << 3 << " Value: " << testFunc(level,TMP2.neighborFace(level,3),3) << std::endl;
-	std::cout << std::endl;
-
-
-
-
-
-	std::cout << "generate new sGrid points from sPolar point - single point, arbitrary coordinates: " << std::endl;
-	fp_type theta = 80*pi/91;
-	fp_type phi = 54*pi/41;
-
-	sPolar polarPoint(theta, phi);
-	sGrid polarToGrid(polarPoint, sGrid::getAccuracyBits(), sGrid::fastMinSearch<sGrid::polarDistanceToRef>);
-
-	std::cout << "polar: " << polarPoint << " grid: " << polarToGrid << "-" << polarToGrid.toPolar();
-	std::cout << " difference: (" << polarPoint.getTheta()-polarToGrid.toPolar().getTheta();
-	std::cout << "," << polarPoint.getPhi()-polarToGrid.toPolar().getPhi() << ")";
-	std::cout << "," << sPolar::distance(polarPoint,polarToGrid.toPolar()) << std::endl;
-	std::cout << std::endl;
-
-	level = sGrid::getAccuracyBits();
-	level = 16;
-
+	/********************  testing conversion from sPolar to sGrid  *********************/
 	size_t pointCount = 1000;
 	std::srand(0);
 	std::cout << "generate " << pointCount << " new sGrid points from sPolar point - random coordinates" << std::endl;
 	std::vector<sPolar> polarPoints(pointCount);
-    std::for_each(polarPoints.begin(), polarPoints.end(), [](sPolar& P) {P = sPolar(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);});
+	std::for_each(polarPoints.begin(), polarPoints.end(), [](sPolar& P) {
+		P = sPolar(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);
+	});
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-	std::vector<sGrid> gridPointsFastSearch(pointCount);
-	for (size_t it = 0; it < pointCount; ++it)
-	{
-	    gridPointsFastSearch[it] = sGrid(polarPoints[it], level, sGrid::fastMinSearch<sGrid::polarDistanceToRef>);
-	}
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> fastSearchTime = t2 - t1;
 
-    t1 = std::chrono::high_resolution_clock::now();
 	std::vector<sGrid> gridPointsRobustSearch(pointCount);
+	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size_t it = 0; it < pointCount; ++it)
 	{
-	    gridPointsRobustSearch[it] = sGrid(polarPoints[it], level, sGrid::minSearch<sGrid::polarDistanceToRef>);
+		gridPointsRobustSearch[it] = sGrid(polarPoints[it], level, sGrid::minSearch<sGrid::polarDistanceToRef>);
 	}
-    t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> robustSearchTime = t2 - t1;
-
+	auto t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> robustSearchTime = t2 - t1;
 	fp_type maxDifference = 0;
-	size_t max_it_fastSearch = 0;
-	for (size_t it = 0; it < pointCount; ++it)
-	{
-		if ( maxDifference < sPolar::distance(polarPoints[it],gridPointsFastSearch[it].toPolar()) )
-		{
-			maxDifference = sPolar::distance(polarPoints[it],gridPointsFastSearch[it].toPolar());
-			max_it_fastSearch = it;
-		}
-	}
-	std::cout << "sGrid point with highest distance to given sPolar using fastMinSearch - execution time: " << fastSearchTime.count() << "ms" << std::endl;
-	std::cout << "polar[" << max_it_fastSearch << "]: " << polarPoints[max_it_fastSearch] << " grid: " << gridPointsFastSearch[max_it_fastSearch] << "-" << gridPointsFastSearch[max_it_fastSearch].toPolar();
-	std::cout << " difference: (" << polarPoints[max_it_fastSearch].getTheta()-gridPointsFastSearch[max_it_fastSearch].toPolar().getTheta();
-	std::cout << "," << polarPoints[max_it_fastSearch].getPhi()-gridPointsFastSearch[max_it_fastSearch].toPolar().getPhi() << ")";
-	std::cout << "," << sPolar::distance(polarPoints[max_it_fastSearch],gridPointsFastSearch[max_it_fastSearch].toPolar()) << std::endl;
-
-	maxDifference = 0;
-	max_it_fastSearch = 0;
+	size_t max_it_Search = 0;
 	for (size_t it = 0; it < pointCount; ++it)
 	{
 		if ( maxDifference < sPolar::distance(polarPoints[it],gridPointsRobustSearch[it].toPolar()) )
 		{
 			maxDifference = sPolar::distance(polarPoints[it],gridPointsRobustSearch[it].toPolar());
-			max_it_fastSearch = it;
+			max_it_Search = it;
 		}
 	}
-	std::cout << "sGrid point with highest distance to given sPolar using minSearch - execution time: " << robustSearchTime.count() << "ms" << std::endl;
-	std::cout << "polar[" << max_it_fastSearch << "]: " << polarPoints[max_it_fastSearch] << " grid: " << gridPointsRobustSearch[max_it_fastSearch] << "-" << gridPointsRobustSearch[max_it_fastSearch].toPolar();
-	std::cout << " difference: (" << polarPoints[max_it_fastSearch].getTheta()-gridPointsRobustSearch[max_it_fastSearch].toPolar().getTheta();
-	std::cout << "," << polarPoints[max_it_fastSearch].getPhi()-gridPointsRobustSearch[max_it_fastSearch].toPolar().getPhi() << ")";
-	std::cout << "," << sPolar::distance(polarPoints[max_it_fastSearch],gridPointsRobustSearch[max_it_fastSearch].toPolar()) << std::endl;
+	std::cout << "minSearch test: sGrid point with highest distance to given sPolar - execution time: " << robustSearchTime.count() << "ms" << std::endl;
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " robust grid search: " << gridPointsRobustSearch[max_it_Search] << "-" << gridPointsRobustSearch[max_it_Search].toPolar() << std::endl;
+	std::cout << " polar difference  : (" << polarPoints[max_it_Search].getTheta()-gridPointsRobustSearch[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsRobustSearch[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << ", polar distance: " << sPolar::distance(polarPoints[max_it_Search],gridPointsRobustSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << std::endl;
 
-	scaledFP maxDifference2 = 0;
-	max_it_fastSearch = 0;
+
+	std::vector<sGrid> gridPointsFastSearch(pointCount);
+	t1 = std::chrono::high_resolution_clock::now();
 	for (size_t it = 0; it < pointCount; ++it)
 	{
-		if ( maxDifference2 < sGrid::distance(gridPointsFastSearch[it],gridPointsRobustSearch[it]) )
+		gridPointsFastSearch[it] = sGrid(polarPoints[it], level, sGrid::fastMinSearch<sGrid::polarDistanceToRef>);
+	}
+	t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> fastSearchTime = t2 - t1;
+	maxDifference = 0;
+	max_it_Search = 0;
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		if ( maxDifference < sPolar::distance(polarPoints[it],gridPointsFastSearch[it].toPolar()) )
 		{
-			maxDifference2 = sGrid::distance(gridPointsFastSearch[it],gridPointsRobustSearch[it]);
-			max_it_fastSearch = it;
+			maxDifference = sPolar::distance(polarPoints[it],gridPointsFastSearch[it].toPolar());
+			max_it_Search = it;
 		}
 	}
-	std::cout << "sGrid point with highest difference between fastMinSearch and minSearch: " << std::endl;
-	std::cout << "polar[" << max_it_fastSearch << "]: " << polarPoints[max_it_fastSearch] << std::endl;
-	std::cout << "fast search  : " << gridPointsFastSearch[max_it_fastSearch] << "-" << gridPointsFastSearch[max_it_fastSearch].toPolar();
-	std::cout << " difference to polar: (" << polarPoints[max_it_fastSearch].getTheta()-gridPointsFastSearch[max_it_fastSearch].toPolar().getTheta();
-	std::cout << "," << polarPoints[max_it_fastSearch].getPhi()-gridPointsFastSearch[max_it_fastSearch].toPolar().getPhi() << ")";
-	std::cout << "," << sPolar::distance(polarPoints[max_it_fastSearch],gridPointsFastSearch[max_it_fastSearch].toPolar()) << std::endl;
-	std::cout << "robust search: " << gridPointsRobustSearch[max_it_fastSearch] << "-" << gridPointsRobustSearch[max_it_fastSearch].toPolar();
-	std::cout << " difference to polar: (" << polarPoints[max_it_fastSearch].getTheta()-gridPointsRobustSearch[max_it_fastSearch].toPolar().getTheta();
-	std::cout << "," << polarPoints[max_it_fastSearch].getPhi()-gridPointsRobustSearch[max_it_fastSearch].toPolar().getPhi() << ")";
-	std::cout << "," << sPolar::distance(polarPoints[max_it_fastSearch],gridPointsRobustSearch[max_it_fastSearch].toPolar()) << std::endl;
-	std::cout << "difference between grid points: (" << gridPointsFastSearch[max_it_fastSearch].toPolar().getTheta()-gridPointsRobustSearch[max_it_fastSearch].toPolar().getTheta();
-	std::cout << "," << gridPointsFastSearch[max_it_fastSearch].toPolar().getPhi()-gridPointsRobustSearch[max_it_fastSearch].toPolar().getPhi() << ")";
-	std::cout << "," << sGrid::distance(gridPointsFastSearch[max_it_fastSearch],gridPointsRobustSearch[max_it_fastSearch]) << std::endl;
+	std::cout << "fastMinSearch test: sGrid point with highest distance to given sPolar - execution time: " << fastSearchTime.count() << "ms" << std::endl;
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " fast grid search  : " << gridPointsFastSearch[max_it_Search] << "-" << gridPointsFastSearch[max_it_Search].toPolar() << std::endl;
+	std::cout << " robust grid search: " << gridPointsRobustSearch[max_it_Search] << "-" << gridPointsRobustSearch[max_it_Search].toPolar() << std::endl;
+	std::cout << " polar difference  : (" << polarPoints[max_it_Search].getTheta()-gridPointsFastSearch[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsFastSearch[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << ", polar distance: " << sPolar::distance(polarPoints[max_it_Search],gridPointsFastSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << " grid distance fast vs robust search: " << sGrid::distance(gridPointsRobustSearch[max_it_Search],gridPointsFastSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << std::endl;
+
+
+	std::vector<sGrid> gridPointsHybridSearch(pointCount);
+	t1 = std::chrono::high_resolution_clock::now();
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		gridPointsHybridSearch[it] = sGrid(polarPoints[it], level, sGrid::hybridMinSearch<sGrid::polarDistanceToRef>);
+	}
+	t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> hybridSearchTime = t2 - t1;
+	maxDifference = 0;
+	max_it_Search = 0;
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		if ( maxDifference < sPolar::distance(polarPoints[it],gridPointsHybridSearch[it].toPolar()) )
+		{
+			maxDifference = sPolar::distance(polarPoints[it],gridPointsHybridSearch[it].toPolar());
+			max_it_Search = it;
+		}
+	}
+	std::cout << "hybridMinSearch test: sGrid point with highest distance to given sPolar - execution time: " << hybridSearchTime.count() << "ms" << std::endl;
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " hybrid grid search  : " << gridPointsHybridSearch[max_it_Search] << "-" << gridPointsHybridSearch[max_it_Search].toPolar() << std::endl;
+	std::cout << " robust grid search: " << gridPointsRobustSearch[max_it_Search] << "-" << gridPointsRobustSearch[max_it_Search].toPolar() << std::endl;
+	std::cout << " polar difference  : (" << polarPoints[max_it_Search].getTheta()-gridPointsHybridSearch[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsHybridSearch[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << ", polar distance: " << sPolar::distance(polarPoints[max_it_Search],gridPointsHybridSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << " grid distance robust vs hybrid search: " << sGrid::distance(gridPointsRobustSearch[max_it_Search],gridPointsHybridSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << std::endl;
+
+
+	scaledFP maxDifferenceScaled = {0,0};
+	max_it_Search = 0;
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		if ( maxDifferenceScaled < sGrid::distance(gridPointsFastSearch[it],gridPointsRobustSearch[it]) )
+		{
+			maxDifferenceScaled = sGrid::distance(gridPointsFastSearch[it],gridPointsRobustSearch[it]);
+			max_it_Search = it;
+		}
+	}
+	std::cout << "sGrid point with highest distance between fastMinSearch and minSearch: " << std::endl;
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " fast search  : " << gridPointsFastSearch[max_it_Search] << "-" << gridPointsFastSearch[max_it_Search].toPolar();
+	std::cout << " difference to polar: (" << polarPoints[max_it_Search].getTheta()-gridPointsFastSearch[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsFastSearch[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << "," << sPolar::distance(polarPoints[max_it_Search],gridPointsFastSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << " robust search: " << gridPointsRobustSearch[max_it_Search] << "-" << gridPointsRobustSearch[max_it_Search].toPolar();
+	std::cout << " difference to polar: (" << polarPoints[max_it_Search].getTheta()-gridPointsRobustSearch[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsRobustSearch[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << "," << sPolar::distance(polarPoints[max_it_Search],gridPointsRobustSearch[max_it_Search].toPolar()) << std::endl;
+	std::cout << " difference between grid points: (" << gridPointsFastSearch[max_it_Search].toPolar().getTheta()-gridPointsRobustSearch[max_it_Search].toPolar().getTheta();
+	std::cout << "," << gridPointsFastSearch[max_it_Search].toPolar().getPhi()-gridPointsRobustSearch[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << "," << sGrid::distance(gridPointsFastSearch[max_it_Search],gridPointsRobustSearch[max_it_Search]) << std::endl;
+	std::cout << std::endl;
 
 
 
-#ifdef DEBUG
+	/********************  testing different minimum search algorithms for the test function refPointTestFunction  *********************/
+	std::cout << "compare different grid search algorithms how well minima of refPointTestFunction are found: check the " << pointCount << " points above:" << std::endl;
+	std::vector<sGrid> gridPointsRobustSearchTest(pointCount);
+	t1 = std::chrono::high_resolution_clock::now();
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		gridPointsRobustSearchTest[it] = sGrid::minSearch(refPointTestFunction(polarPoints[it]));
+	}
+	t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> robustSearchTimeTest = t2 - t1;
 
+    size_t largeOffsetCount = 0;
+	maxDifference = 0;
+	max_it_Search = 0;
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+	    fp_type distance = sPolar::distance(polarPoints[it],gridPointsRobustSearchTest[it].toPolar());
+	    if (distance > 1e-3) largeOffsetCount++;
+		if ( maxDifference < distance )
+		{
+			maxDifference = distance;
+			max_it_Search = it;
+		}
+	}
+	std::cout << "minSearch test function minimum - execution time: " << robustSearchTimeTest.count() << "ms" << std::endl;
+	std::cout << "point count with large offset >1e-3: " << largeOffsetCount << std::endl;
+	std::cout << "sGrid point with highest distance to given sPolar: ";
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " robust grid search test  : " << gridPointsRobustSearchTest[max_it_Search] << "-" << gridPointsRobustSearchTest[max_it_Search].toPolar() << std::endl;
+	std::cout << " robust grid search: " << gridPointsRobustSearch[max_it_Search] << "-" << gridPointsRobustSearch[max_it_Search].toPolar() << std::endl;
+	std::cout << " polar difference  : (" << polarPoints[max_it_Search].getTheta()-gridPointsRobustSearchTest[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsRobustSearchTest[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << ", polar distance: " << sPolar::distance(polarPoints[max_it_Search],gridPointsRobustSearchTest[max_it_Search].toPolar()) << std::endl;
+	std::cout << std::endl;
+
+
+
+	std::vector<sGrid> gridPointsFastSearchTest(pointCount);
+	t1 = std::chrono::high_resolution_clock::now();
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		gridPointsFastSearchTest[it] = sGrid::fastMinSearch(refPointTestFunction(polarPoints[it]));
+	}
+	t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> fastSearchTimeTest = t2 - t1;
+
+    largeOffsetCount = 0;
+	maxDifference = 0;
+	max_it_Search = 0;
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+	    fp_type distance = sPolar::distance(polarPoints[it],gridPointsFastSearchTest[it].toPolar());
+	    if (distance > 1e-3) largeOffsetCount++;
+		if ( maxDifference < distance )
+		{
+			maxDifference = distance;
+			max_it_Search = it;
+		}
+	}
+	std::cout << "fastMinSearch test function minimum - execution time: " << fastSearchTimeTest.count() << "ms" << std::endl;
+	std::cout << "point count with large offset >1e-3: " << largeOffsetCount << std::endl;
+	std::cout << "sGrid point with highest distance to given sPolar: ";
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " fast grid search test  : " << gridPointsFastSearchTest[max_it_Search] << "-" << gridPointsFastSearchTest[max_it_Search].toPolar() << std::endl;
+	std::cout << " polar difference  : (" << polarPoints[max_it_Search].getTheta()-gridPointsFastSearchTest[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsFastSearchTest[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << ", polar distance: " << sPolar::distance(polarPoints[max_it_Search],gridPointsFastSearchTest[max_it_Search].toPolar()) << std::endl;
+	std::cout << std::endl;
+
+
+
+	std::vector<sGrid> gridPointsHybridSearchTest(pointCount);
+	t1 = std::chrono::high_resolution_clock::now();
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+		gridPointsHybridSearchTest[it] = sGrid::hybridMinSearch(refPointTestFunction(polarPoints[it]));
+	}
+	t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> hybridSearchTimeTest = t2 - t1;
+
+    largeOffsetCount = 0;
+	maxDifference = 0;
+	max_it_Search = 0;
+	for (size_t it = 0; it < pointCount; ++it)
+	{
+	    fp_type distance = sPolar::distance(polarPoints[it],gridPointsHybridSearchTest[it].toPolar());
+	    if (distance > 1e-3) largeOffsetCount++;
+		if ( maxDifference < distance )
+		{
+			maxDifference = distance;
+			max_it_Search = it;
+		}
+	}
+	std::cout << "hybridMinSearch test function minimum - execution time: " << hybridSearchTimeTest.count() << "ms" << std::endl;
+	std::cout << "point count with large offset >1e-3: " << largeOffsetCount << std::endl;
+	std::cout << "sGrid point with highest distance to given sPolar: ";
+	std::cout << "polar[" << max_it_Search << "]: " << polarPoints[max_it_Search] << std::endl;
+	std::cout << " hybrid grid search test  : " << gridPointsHybridSearchTest[max_it_Search] << "-" << gridPointsHybridSearchTest[max_it_Search].toPolar() << std::endl;
+	std::cout << " polar difference  : (" << polarPoints[max_it_Search].getTheta()-gridPointsHybridSearchTest[max_it_Search].toPolar().getTheta();
+	std::cout << "," << polarPoints[max_it_Search].getPhi()-gridPointsHybridSearchTest[max_it_Search].toPolar().getPhi() << ")";
+	std::cout << ", polar distance: " << sPolar::distance(polarPoints[max_it_Search],gridPointsHybridSearchTest[max_it_Search].toPolar()) << std::endl;
+	std::cout << std::endl;
+
+
+
+#endif //MIN_SEARCH_CHECK
+
+
+
+#ifdef DISTANCE_ERROR_CHECK
+	/********************  point distance calculations: comparing sGrid vs sPolar results  *********************/
+	std::cout << "Comparing distances between grid coordinates and polar coordinates (up to level 4):" << std::endl;
+	//initialize Q as all faces in levels 0,1,2,3
+	sGrid Q[512];
+	for (size_t it0 = 0; it0<8; it0++)
+	{
+		for (size_t it1 = 0; it1<4; it1++)
+		{
+			for (size_t it2 = 0; it2<4; it2++)
+			{
+				for (size_t it3 = 0; it3<4; it3++)
+				{
+					Q[it0+8*it1+32*it2+128*it3].setExtend(0,it0);
+					Q[it0+8*it1+32*it2+128*it3].setExtend(1,it1);
+					Q[it0+8*it1+32*it2+128*it3].setExtend(2,it2);
+					Q[it0+8*it1+32*it2+128*it3].setExtend(3,it3);
+				}
+			}
+		}
+	}
+
+	size_t l1_max=3;
+	size_t l2_max=4;
+	size_t i_max=352;
+	size_t j_max=359;
+
+	fp_type difference = 0;
+	fp_type max_difference = 0;
+	for (size_t l1=0; l1<5; l1++)
+	{
+		for (size_t l2=0; l2<5; l2++)
+		{
+			for (size_t i = 0; i<512; i++)
+			{
+				for (size_t j = 0; j<512; j++)
+				{
+					difference = std::abs(SPIRID::sPolar::distance(Q[i].toPolar(l1),Q[j].toPolar(l2))
+					                      - SPIRID::sGrid::distance(l1,Q[i],l2,Q[j]).toFPType());
+					if (std::isnan(difference)) std::cerr << "nan" << std::endl;
+					if( difference > max_difference)
+					{
+						max_difference = difference;
+						i_max = i;
+						j_max = j;
+						l1_max = l1;
+						l2_max = l2;
+					}
+				}
+			}
+		}
+	}
+
+	std::cout << "(" << l1_max << "," << l2_max << ")";
+	std::cout << "(" << i_max << "," << j_max << "): ";
+	std::cout << Q[i_max] << Q[i_max].toPolar(l1_max) << Q[j_max] << Q[j_max].toPolar(l2_max) << ": ";
+	std::cout << "polar: " << SPIRID::sPolar::distance(Q[i_max].toPolar(l1_max),Q[j_max].toPolar(l2_max)) << ",";
+	std::cout << " grid: " << SPIRID::sGrid::distance(l1_max,Q[i_max],l2_max,Q[j_max]) << ",";
+	std::cout << " difference: " << scaledFP(SPIRID::sPolar::distance(Q[i_max].toPolar(l1_max),Q[j_max].toPolar(l2_max)),0) - SPIRID::sGrid::distance(l1_max,Q[i_max],l2_max,Q[j_max]);
+	std::cout << std::endl;
+	std::cout << std::endl;
+#endif //DISTANCE_ERROR_CHECK
+
+
+
+#ifdef FACE_GEOMETRY_CHECK
+	/********************  testing face geometry functions  *********************/
+	std::cout << "checking edge lengths of the same edge in different faces: ";
+	std::cout << std::endl;
+	sGrid GF0(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,1,3,3}));
+	sGrid GF1(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,0,2,2}));
+	sGrid GF2(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,0,3,3,1,1}));
+	sGrid GF3(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,1,3,0}));
+	std::cout << "GF0: " << GF0;
+	std::cout << std::endl;
+	std::cout << "GF1: " << GF1;
+	std::cout << std::endl;
+	std::cout << "GF2: " << GF2;
+	std::cout << std::endl;
+	std::cout << "GF3: " << GF3;
+	std::cout << std::endl;
+	std::cout << "level 30 GF0 edgeLength 1: " << GF0.edgeLength(30,1);
+	std::cout << " edgeLength 2: " << GF0.edgeLength(30,2);
+	std::cout << " edgeLength 3: " << GF0.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "level 30 GF1 edgeLength 1: " << GF1.edgeLength(30,1);
+	std::cout << " edgeLength 2: " << GF1.edgeLength(30,2);
+	std::cout << " edgeLength 3: " << GF1.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "level 30 GF2 edgeLength 1: " << GF2.edgeLength(30,1);
+	std::cout << " edgeLength 2: " << GF2.edgeLength(30,2);
+	std::cout << " edgeLength 3: " << GF2.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "level 30 GF3 edgeLength 1: " << GF3.edgeLength(30,1);
+	std::cout << " edgeLength 2: " << GF3.edgeLength(30,2);
+	std::cout << " edgeLength 3: " << GF3.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "lengths of same edges in different faces: ";
+	std::cout << std::endl;
+	std::cout << "GF0 edge1 - GF1 edge1: " << GF0.edgeLength(30,1) - GF1.edgeLength(30,1);
+	std::cout << std::endl;
+	std::cout << "GF0 edge2 - GF2 edge2: " << GF0.edgeLength(30,2) - GF2.edgeLength(30,2);
+	std::cout << std::endl;
+	std::cout << "GF0 edge3 - GF3 edge3: " << GF0.edgeLength(30,3) - GF3.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "lengths of different nearby edges: ";
+	std::cout << std::endl;
+	std::cout << "GF2 edge1 - GF1 edge1: " << GF2.edgeLength(30,1) - GF1.edgeLength(30,1);
+	std::cout << std::endl;
+	std::cout << "GF2 edge3 - GF1 edge3: " << GF2.edgeLength(30,3) - GF1.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "GF3 edge1 - GF2 edge1: " << GF3.edgeLength(30,1) - GF2.edgeLength(30,1);
+	std::cout << std::endl;
+	std::cout << "GF3 edge3 - GF2 edge3: " << GF3.edgeLength(30,3) - GF2.edgeLength(30,3);
+	std::cout << std::endl;
+	std::cout << "GF1 edge1 - GF3 edge1: " << GF1.edgeLength(30,1) - GF3.edgeLength(30,1);
+	std::cout << std::endl;
+	std::cout << std::endl;
+
+#endif //FACE_GEOMETRY_CHECK
+
+
+
+#ifdef TO_POLAR_CHECK
+	/********************  testing conversion from sGrid to sPolar  *********************/
+	sGrid F0(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,1,3,3}));
+	sGrid F1(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,0,2,2}));
+	sGrid F2(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,0,3,3,1,1}));
+	sGrid F3(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,1,3,0}));
 	std::cout << "checking polar coordinates in Octant0: ";
 	std::cout << std::endl;
 	sGrid O0(std::vector<unsigned short>({0}));
 	std::cout << "O0 center:   " << O0.toPolar(0,0);
 	std::cout << " O0 front:   " << O0.toPolar(0,1);
-	std::cout << "          O0 west:   " << O0.toPolar(0,2);
+	std::cout << "          O0 east:   " << O0.toPolar(0,2);
 	std::cout << "            O0 north:   " << O0.toPolar(0,3);
 	std::cout << std::endl;
 	O0.setExtend(1,0);
 	std::cout << "O00 center:  " << O0.toPolar(1,0);
-	std::cout << " O00 west:   " << O0.toPolar(1,1);
+	std::cout << " O00 east:   " << O0.toPolar(1,1);
 	std::cout << "           O00 front: " << O0.toPolar(1,2);
 	std::cout << "         O00 south:  " << O0.toPolar(1,3);
 	std::cout << std::endl;
 	O0.setExtend(2,0);
 	std::cout << "O000 center: " << O0.toPolar(2,0);
 	std::cout << " O000 front: " << O0.toPolar(2,1);
-	std::cout << " O000 west: " << O0.toPolar(2,2);
+	std::cout << " O000 east: " << O0.toPolar(2,2);
 	std::cout << " O000 north: " << O0.toPolar(2,3);
 	std::cout << std::endl;
 	std::cout << std::endl;
 
-	std::cout << "checking edge lengths of the same edge in different faces: ";
-	std::cout << std::endl;
-	sGrid F0(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,1,3,3}));
-	sGrid F1(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,0,2,2}));
-	sGrid F2(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,0,3,3,1,1}));
-	sGrid F3(std::vector<unsigned short>({0,3,1,2,1,2,2,1,2,3,1,3,3,1,0,0,0,1,2,3,1,2,2,1,2,2,2,1,1,3,0}));
-	std::cout << "F0: " << F0;
-	std::cout << std::endl;
-	std::cout << "F1: " << F1;
-	std::cout << std::endl;
-	std::cout << "F2: " << F2;
-	std::cout << std::endl;
-	std::cout << "F3: " << F3;
-	std::cout << std::endl;
-	std::cout << "level 30 F0 edgeLength 1: " << F0.edgeLength(30,1);
-	std::cout << " edgeLength 2: " << F0.edgeLength(30,2);
-	std::cout << " edgeLength 3: " << F0.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "level 30 F1 edgeLength 1: " << F1.edgeLength(30,1);
-	std::cout << " edgeLength 2: " << F1.edgeLength(30,2);
-	std::cout << " edgeLength 3: " << F1.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "level 30 F2 edgeLength 1: " << F2.edgeLength(30,1);
-	std::cout << " edgeLength 2: " << F2.edgeLength(30,2);
-	std::cout << " edgeLength 3: " << F2.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "level 30 F3 edgeLength 1: " << F3.edgeLength(30,1);
-	std::cout << " edgeLength 2: " << F3.edgeLength(30,2);
-	std::cout << " edgeLength 3: " << F3.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "lengths of same edges in different faces: ";
-	std::cout << std::endl;
-	std::cout << "F0 edge1 - F1 edge1: " << F0.edgeLength(30,1) - F1.edgeLength(30,1);
-	std::cout << std::endl;
-	std::cout << "F0 edge2 - F2 edge2: " << F0.edgeLength(30,2) - F2.edgeLength(30,2);
-	std::cout << std::endl;
-	std::cout << "F0 edge3 - F3 edge3: " << F0.edgeLength(30,3) - F3.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "lengths of different nearby edges: ";
-	std::cout << std::endl;
-	std::cout << "F2 edge1 - F1 edge1: " << F2.edgeLength(30,1) - F1.edgeLength(30,1);
-	std::cout << std::endl;
-	std::cout << "F2 edge3 - F1 edge3: " << F2.edgeLength(30,3) - F1.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "F3 edge1 - F2 edge1: " << F3.edgeLength(30,1) - F2.edgeLength(30,1);
-	std::cout << std::endl;
-	std::cout << "F3 edge3 - F2 edge3: " << F3.edgeLength(30,3) - F2.edgeLength(30,3);
-	std::cout << std::endl;
-	std::cout << "F1 edge1 - F3 edge1: " << F1.edgeLength(30,1) - F3.edgeLength(30,1);
-	std::cout << std::endl;
 	std::cout << "polar coordinates of the same node in different faces: ";
 	std::cout << std::endl;
 	sPolar F0p = F0.toPolar(30,2);
@@ -483,9 +604,12 @@ int main()
 	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
 	std::cout << std::endl;
 	std::cout << std::endl;
+#endif //TO_POLAR_CHECK
 
 
 
+#ifdef GRID_NEIGHBOR_CHECK
+	/********************  testing functions to get neighbor faces, nodes and edges  *********************/
 	std::cout << "collecting neighbor faces & nodes for special points: ";
 	std::cout << std::endl;
 	std::list<sGrid> starF = sGrid(std::vector<bool>({0,0,0,1,1,1,1})).nodeNeighborFaces(2,2);
@@ -608,70 +732,7 @@ int main()
 	std::cout << std::endl;
 	std::cout << std::endl;
 
-
-
-	std::cout << "Comparing distances between grid coordinates and polar coordinates (up to level 4):" << std::endl;
-	//initialize Q as all faces in levels 0,1,2,3
-	sGrid Q[512];
-	for (size_t it0 = 0; it0<8; it0++)
-	{
-		for (size_t it1 = 0; it1<4; it1++)
-		{
-			for (size_t it2 = 0; it2<4; it2++)
-			{
-				for (size_t it3 = 0; it3<4; it3++)
-				{
-					Q[it0+8*it1+32*it2+128*it3].setExtend(0,it0);
-					Q[it0+8*it1+32*it2+128*it3].setExtend(1,it1);
-					Q[it0+8*it1+32*it2+128*it3].setExtend(2,it2);
-					Q[it0+8*it1+32*it2+128*it3].setExtend(3,it3);
-				}
-			}
-		}
-	}
-
-	size_t l1_max=3;
-	size_t l2_max=4;
-	size_t i_max=450;
-	size_t j_max=453;
-
-	/*
-	        fp_type difference = 0;
-			fp_type max_difference = 0;
-			for (size_t l1=0; l1<5; l1++)
-			{
-				for (size_t l2=0; l2<5; l2++)
-				{
-					for (size_t i = 0; i<512; i++)
-					{
-						for (size_t j = 0; j<512; j++)
-						{
-							difference = std::abs(SPIRID::sPolar::distance(Q[i].toPolar(l1),Q[j].toPolar(l2)) - SPIRID::sGrid::distance(l1,Q[i],l2,Q[j]));
-							if (std::isnan(difference)) std::cerr << "nan" << std::endl;
-							if( difference > max_difference)
-							{
-								max_difference = difference;
-								i_max = i;
-								j_max = j;
-								l1_max = l1;
-								l2_max = l2;
-							}
-						}
-					}
-				}
-			}
-	*/
-
-	std::cout << "(" << l1_max << "," << l2_max << ")";
-	std::cout << "(" << i_max << "," << j_max << "): ";
-	std::cout << Q[i_max] << Q[i_max].toPolar(l1_max) << Q[j_max] << Q[j_max].toPolar(l2_max) << ": ";
-	std::cout << "polar: " << SPIRID::sPolar::distance(Q[i_max].toPolar(l1_max),Q[j_max].toPolar(l2_max)) << ",";
-	std::cout << " grid: " << SPIRID::sGrid::distance(l1_max,Q[i_max],l2_max,Q[j_max]) << ",";
-	std::cout << " difference: " << SPIRID::sPolar::distance(Q[i_max].toPolar(l1_max),Q[j_max].toPolar(l2_max)) - SPIRID::sGrid::distance(l1_max,Q[i_max],l2_max,Q[j_max]);
-	std::cout << std::endl;
-	std::cout << std::endl;
-
-#endif //DEBUG
+#endif //GRID_NEIGHBOR_CHECK
 
 	return 0;
 }

@@ -25,8 +25,6 @@ SPIRID::sGrid::sGrid(
 ) : gridCode()
 {
     polarDistanceToRef polarDistanceToP(P);
-//	*this = minSearch<polarDistanceToRef>(polarDistanceToP, level);
-//	*this = searchMinPoint<polarDistanceToRef>(polarDistanceToP, level);
     *this = minSearchFunction(polarDistanceToP, level);
 }
 
@@ -173,14 +171,22 @@ SPIRID::sGrid::reset(size_t level)
     std::fill(gridCode.begin()+start, gridCode.end(), false);
     return *this;
 }
+void
+SPIRID::sGrid::trunc()
+{
+    size_t it = depth();
+    while (it > 0 && operator [](it) == 0) {--it;}
+    resize(it);
+    return;
+}
 
 
 
 //special points
 const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::NorthOct0 = {SPIRID::sGrid(std::vector<bool>({0,0,0})),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),2};
 const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::SouthOct7 = {SPIRID::sGrid(std::vector<bool>({1,1,1})),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),2};
 
 
 
@@ -600,14 +606,21 @@ SPIRID::sGrid::subGridScanner::operator == (const subGridScanner& s2) const
 
 
 
+void SPIRID::sGrid::print(std::ostream& out) const
+{
+    out << "(F";
+    for (size_t it=0; it<=depth(); it++) out << at(it);
+    out << ")";
+}
 
 //output a complete face code
 std::ostream& SPIRID::operator << (std::ostream& out, const sGrid& P)
 {
-    out << "(F";
+    P.print(out);
+/*    out << "(F";
     for (size_t it=0; it<=P.depth(); it++) out << P.at(it);
     out << ")";
-    return out;
+*/    return out;
 }
 //output data of a common node
 std::ostream& SPIRID::sGrid::pointPairRefNode::print(std::ostream& out)

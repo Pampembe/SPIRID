@@ -170,10 +170,10 @@ SPIRID::sGrid::interiorAngle(
 		return ACOS((SinbSq+SincSq-SinaSq)/(SQRT(SinbSq*SincSq)*2));
 	}
 
-	return interiorAngle(2*level,SinbSq,SincSq,SinaSq);
+	return interiorAngle_fromSinSqe(2*level,SinbSq,SincSq,SinaSq);
 }
 //calculate interior angle of geometry
-fp_type SPIRID::sGrid::interiorAngle(
+fp_type SPIRID::sGrid::interiorAngle_fromSinSqe(
     scaleExp_type scaleSq,
     fp_type SinbSq,
     fp_type SincSq,
@@ -183,8 +183,20 @@ fp_type SPIRID::sGrid::interiorAngle(
 	fp_type ScaledSinb2Sq = calcEdgeBisection(scaleSq, SinbSq);
 	fp_type ScaledSinc2Sq = calcEdgeBisection(scaleSq, SincSq);
 
-	return ACOS( (2*ScaledSinc2Sq - 2*ScaledSina2Sq - ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq) - 2) ) /
-	             (4*SQRT(SinbSq*SincSq)) );
+	return ACOS( (ScaledSinc2Sq - ScaledSina2Sq - ScaledSinb2Sq*(LDEXP(ScaledSinc2Sq,-scaleSq-1) - 1) ) /
+	             (2*SQRT(SinbSq*SincSq)) );
+}
+//calculate interior angle of geometry
+fp_type SPIRID::sGrid::interiorAngle_fromSinSqeHalf(
+    scaleExp_type scaleSq, //scaleSq==2*level+2
+    fp_type SinSqbHalf,
+    fp_type SinSqcHalf,
+    fp_type SinSqaHalf)
+{
+	fp_type SinbSq = (SinSqbHalf-SinSqbHalf*LDEXP(SinSqbHalf, -scaleSq));
+	fp_type SincSq = (SinSqcHalf-SinSqcHalf*LDEXP(SinSqcHalf, -scaleSq));
+	return ACOS( (SinSqcHalf - SinSqaHalf - SinSqbHalf*(LDEXP(SinSqcHalf,-scaleSq+1) - 1) ) /
+	             (2*SQRT(SinbSq*SincSq)) );
 }
 
 //calculate area of a face
@@ -282,6 +294,42 @@ SPIRID::sGrid::calcSinEdgeHalfSAS(
 	}
 	return LDEXP(result,-1);
 }
+//calculate the edge length E of a triangle (as 2^(level+2)*Sin^2(E/2)), given side-angle-side data ( side lengths L as 2^(level+2)*Sin^2(L/2) )
+fp_type
+SPIRID::sGrid::robustCalcSinEdgeHalfSAS(
+    scaleExp_type scaleSq, //scaleSq is 2*level+2
+    fp_type SinaHalfSq,
+    fp_type cosDelta,
+    fp_type SinbHalfSq)
+{
+	/* Calculation method here differs from calcSinSqEdgeHalfSAS:
+	        At a==b and delta==0 the calculated edge length becomes zero and the numerical result is dominated by rounding errors.
+	        Since calcSinSqEdgeHalfSAS returns the square of a length, we may loose accuracy by taking the square root of rounding errors.
+	        Here we use a different calculation method and return the Sine of half the edge length (instead of half the length squared)
+	        If the calculated edge length is d then the return value here is 2^(level+1) * Sin(d/2).
+
+	    From spherical cosine law:
+	    Sin(d/2)^2 = termL^2 + termA^2
+	    termL = |Sin(a/2)*Cos(b/2) - Cos(delta)*Cos(a/2)*Sin(b/2)|
+	    termA = |Cos(a/2)*Sin(b/2)*Sin(delta)|
+	*/
+	fp_type termL = ABS( SQRT(SinaHalfSq * (1-LDEXP(SinbHalfSq,-scaleSq)))
+	                     - cosDelta * SQRT( SinbHalfSq * (1-LDEXP(SinaHalfSq,-scaleSq)) ) );
+	fp_type termA = SQRT( (1-cosDelta*cosDelta) * (1-LDEXP(SinaHalfSq,-scaleSq)) * SinbHalfSq);
+
+	fp_type result = 0;
+	if (termA == 0) result = termL;
+	else if (termL == 0) result = termA;
+	else if (termA < termL)
+	{
+		result = termL * SQRT((1+termA*termA/(termL*termL)));
+	}
+	else
+	{
+		result = termA * SQRT((1+termL*termL/(termA*termA)));
+	}
+	return LDEXP(result,-1);
+}
 
 
 
@@ -353,6 +401,21 @@ SPIRID::sGrid::toLocalPolar(size_t refNodeLevel,
                             size_t level,
                             unsigned short location) const
 {
+	inFacePolarSH ThetaPhiSH(calcFacePolarSH(refNodeLevel,nodeCode,edgeCode,level,location));
+
+	//for inFacePolarSH data type: the distance is stored as 2^(2*level+2)*Sin(d/2)^2 --> convert to actual local azimuthal angle
+	if (refNodeLevel>=minScaleSinXToX)
+	{
+		ThetaPhiSH.SinSqdHalf = LDEXP(SQRT(ThetaPhiSH.SinSqdHalf),-refNodeLevel);
+	}
+	else
+	{
+		ThetaPhiSH.SinSqdHalf = 2*ASIN(LDEXP(SQRT(ThetaPhiSH.SinSqdHalf),-refNodeLevel-1));
+	}
+
+	return sPolar(ThetaPhiSH.SinSqdHalf,ThetaPhiSH.angle);
+
+
 	inFacePolar ThetaPhi(calcFacePolar(refNodeLevel,nodeCode,edgeCode,level,location));
 
 	//for inFacePolar data type: the distance is stored as 2^(2*level)*Sin(d)^2 --> convert to actual local azimuthal angle
@@ -482,7 +545,7 @@ SPIRID::sGrid::calcFacePolar(
 		else if (location == edgeCode) //point is the node which is not on the reference edge
 		{
 			SindSq = SinbSq;
-			gammasca = interiorAngle(2*refNodeLevel,SinaSq,SinbSq,SincSq);
+			gammasca = interiorAngle_fromSinSqe(2*refNodeLevel,SinaSq,SinbSq,SincSq);
 		}
 
 		return {SindSq,gammasca};
@@ -516,7 +579,7 @@ SPIRID::sGrid::calcFacePolar(
 			fp_type SineSq = subFacePolar.SinDistSq/4;
 
 			//angle between original reference edge and the connection line between the point and the new reference node inside the center sub-face
-			fp_type delta    = subFacePolar.angle + interiorAngle(refScale,SinaSq,newFaceGeom[nodeCode]/4,SinbSq);
+			fp_type delta    = subFacePolar.angle + interiorAngle_fromSinSqe(refScale,SinaSq,newFaceGeom[nodeCode]/4,SinbSq);
 			fp_type tmpAngle = COS(delta);
 
 			//distance to the original reference node
@@ -524,7 +587,7 @@ SPIRID::sGrid::calcFacePolar(
 
 			//using spherical sine law is unstable near 90 degree angle --> using cosine law & interiorAngle instead
 			tmpAngle = SIN(delta)*SQRT(SineSq/SindSq);
-			if (tmpAngle > 0.95) tmpAngle = interiorAngle(refScale,SinaSq,SindSq,SineSq);
+			if (tmpAngle > 0.95) tmpAngle = interiorAngle_fromSinSqe(refScale,SinaSq,SindSq,SineSq);
 			else tmpAngle = ASIN(tmpAngle);
 
 			return {SindSq,tmpAngle};
@@ -539,6 +602,8 @@ SPIRID::sGrid::calcFacePolar(
 
 			fp_type SinfSq   = subFacePolar.SinDistSq/4;
 			fp_type delta    = subFacePolar.angle;
+			//std::cout << SinaSq << "," << SinfSq << std::endl;
+			//std::cout << calcEdgeBisection(refScale,SinaSq) << "," << calcEdgeBisection(refScale,SinfSq) << "," << delta << std::endl;
 
 			fp_type SindSq = calcSinSqEdgeSAS(refScale,SinaSq,COS(delta),SinfSq);
 
@@ -683,7 +748,7 @@ SPIRID::sGrid::calcFlatFacePolar(
 	    Two formulas can be derived for Sin(delta) or Cos(delta).
 	    The former is more stable and accurate for small delta, the latter is better used for large delta.
 	    Cos(delta) = ( a^2*x + (2*y-x)/3 * (b^2-c^2) ) / (a*d)
-	    Sin^2(delta) = ( (2*y-x) / (3*a*d) )^2 * [(a^2+b^2+b^2)^2 - 2*(a^4+b^4+c^4)]
+	    Sin^2(delta) = ( (2*y-x) / (3*a*d) )^2 * [(a^2+b^2+c^2)^2 - 2*(a^4+b^4+c^4)]
 	*/
 	fp_type delta = 0;
 	if (y>x)
@@ -700,6 +765,216 @@ SPIRID::sGrid::calcFlatFacePolar(
 }
 
 
+//for a point (pointLevel, location): calculate angle and scaled distance to a reference node at lower level
+SPIRID::sGrid::inFacePolarSH
+SPIRID::sGrid::calcFacePolarSH(
+    size_t refNodeLevel, // gridlevel of the reference node
+    unsigned short nodeCode, // reference node in the face
+    unsigned short edgeCode, // reference edge in the face
+    size_t pointLevel, // gridlevel of the grid point for angle and distance calculation
+    unsigned short location // location==0: crossing point of side bisections; location==1,2,3: a node
+) const
+{
+	if (pointLevel<refNodeLevel) return {0,0};
+
+	//calculation for points at very high level can be truncated, because changes are below the calculation accuracy
+	return calcFacePolarSH(refNodeLevel, nodeCode, edgeCode,
+	                     calcFaceGeometry(refNodeLevel),
+	                     std::min(pointLevel, refNodeLevel+accuracyBits),
+	                     location);
+}
+//for a point (pointLevel, location): calculate angle and distance to a reference node at lower level
+//distance d as 2^(2*level+2)*Sin^2(d/2)
+SPIRID::sGrid::inFacePolarSH
+SPIRID::sGrid::calcFacePolarSH(
+    size_t refNodeLevel, // gridlevel of the reference node
+    unsigned short nodeCode, // reference node in the face
+    unsigned short edgeCode, // reference edge in the face
+    const faceGeometry& faceGeom, // scaled edge lengths of the face at refNodeLevel
+    size_t pointLevel, // gridlevel of the grid point for angle and distance calculation
+    unsigned short location // location==0: crossing point of side bisections; location==1,2,3: a node
+) const
+{
+	if (refNodeLevel>=minDepthFlatApprox) return calcFlatFacePolarSH(refNodeLevel, nodeCode, edgeCode, faceGeom, pointLevel, location);
+	if (refNodeLevel==pointLevel)
+	{
+		fp_type SinaSq, SinbSq, SincSq;
+		//assign edge lengths and check that nodeCode and edgeCode have allowed values
+		if (nodeCode == 1)
+		{
+			if (edgeCode == 2)
+			{
+				SinaSq = faceGeom[2];
+				SinbSq = faceGeom[3];
+				SincSq = faceGeom[1];
+			}
+			else if (edgeCode == 3)
+			{
+				SinaSq = faceGeom[3];
+				SinbSq = faceGeom[2];
+				SincSq = faceGeom[1];
+			}
+			else return {0,0};
+		}
+		else if (nodeCode == 2)
+		{
+			if (edgeCode == 1)
+			{
+				SinaSq = faceGeom[1];
+				SinbSq = faceGeom[3];
+				SincSq = faceGeom[2];
+			}
+			else if (edgeCode == 3)
+			{
+				SinaSq = faceGeom[3];
+				SinbSq = faceGeom[1];
+				SincSq = faceGeom[2];
+			}
+			else return {0,0};
+		}
+		else if (nodeCode == 3)
+		{
+			if (edgeCode == 1)
+			{
+				SinaSq = faceGeom[1];
+				SinbSq = faceGeom[2];
+				SincSq = faceGeom[3];
+			}
+			else if (edgeCode == 2)
+			{
+				SinaSq = faceGeom[2];
+				SinbSq = faceGeom[1];
+				SincSq = faceGeom[3];
+			}
+			else return {0,0};
+		}
+		else return {0,0};
+
+		//if location == nodeCode then distance is 0 and we define gamma=0
+		//fp_type SindSq = 0;
+		fp_type SinSqdHalf = 0;
+		fp_type gammasca = 0;
+		if (location == 0) // point is at the intersection of side bisection lines
+		{
+			scaleExp_type refScale = 2*refNodeLevel;
+
+			fp_type ScaledSina2Sq = calcEdgeBisection(refScale, SinaSq);
+			fp_type ScaledSinb2Sq = calcEdgeBisection(refScale, SinbSq);
+			fp_type ScaledSinc2Sq = calcEdgeBisection(refScale, SincSq);
+
+			//SindcSq == (ScaledSina2Sq*(-2 + ScaledSinb2Sq) - 2*(ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq))/(2.*(-9 + ScaledSina2Sq + ScaledSinb2Sq + ScaledSinc2Sq))
+			SinSqdHalf = calcEdgeBisection(
+			                 refScale,
+			                 (    ScaledSina2Sq*(LDEXP(ScaledSinb2Sq,-refScale) - 2)
+			                      - (ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq)*2)/
+			                 ((LDEXP(ScaledSina2Sq + ScaledSinb2Sq + ScaledSinc2Sq,-refScale) - 9)*2)
+			             );
+
+			//Cosgammasca == SQRT(Power(ScaledSina2Sq*(-2 + ScaledSinb2Sq) - 2*(ScaledSinb2Sq - ScaledSinc2Sq + 2*SinaSq),2)/(-2*ScaledSina2Sq*(-2 + ScaledSinb2Sq)*SinaSq + 4*SinaSq*(ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq)))/2.
+			gammasca = ACOS( ( 2*(ScaledSinb2Sq - ScaledSinc2Sq + 2*SinaSq)
+			                   - ScaledSina2Sq*(LDEXP(ScaledSinb2Sq,-refScale) - 2) )/
+			                 SQRT(   (8*ScaledSina2Sq*(2-LDEXP(ScaledSinb2Sq,-refScale))*SinaSq
+			                          + 16*SinaSq*(ScaledSinb2Sq - ScaledSinc2Sq + SinaSq + SinbSq)))
+			               );
+		}
+		else if (location == newCode(nodeCode,edgeCode)) //point is the other node on the reference edge
+		{
+			SinSqdHalf = calcEdgeBisection(2*refNodeLevel, SinaSq);
+		}
+		else if (location == edgeCode) //point is the node which is not on the reference edge
+		{
+			scaleExp_type refScale = 2*refNodeLevel;
+
+			SinSqdHalf = calcEdgeBisection(refScale, SinbSq);
+			gammasca   = interiorAngle_fromSinSqe(refScale,SinaSq,SinbSq,SincSq);
+		}
+
+		return {SinSqdHalf,gammasca};
+	}
+	else
+	{
+		size_t nextLevel = refNodeLevel+1;
+		unsigned short fCode = at(nextLevel);
+		faceGeometry newFaceGeom(faceGeom);
+		stepupFaceGeometryFrom(refNodeLevel,fCode,newFaceGeom);
+
+		if (fCode == nodeCode)
+		{
+			inFacePolarSH subFacePolar(calcFacePolarSH(nextLevel,nodeCode,edgeCode,newFaceGeom,pointLevel,location));
+			subFacePolar.SinSqdHalf /= 4;
+
+			return subFacePolar;
+		}
+		else if (fCode == 0)
+		{
+			scaleExp_type refScale = 2*refNodeLevel;
+			scaleExp_type nextScale = refScale+2;
+			unsigned short otherCode = newCode(edgeCode,nodeCode);
+
+			//relevant edge lengths in the sub-face with code "nodeCode"
+			fp_type SinaSq = calcEdgeBisection(refScale, faceGeom[edgeCode])/4;
+			fp_type SinbSq = calcEdgeBisection(refScale, faceGeom[otherCode])/4;
+			fp_type SinSqaHalf = calcEdgeBisection(refScale, SinaSq);
+
+			//distance and angle to the reference node within the center sub-face
+			inFacePolarSH subFacePolar(calcFacePolarSH(nextLevel, edgeCode, nodeCode, newFaceGeom, pointLevel, location));
+			//distance to the new reference node within the center sub-face
+			fp_type SinSqeHalf = subFacePolar.SinSqdHalf/4;
+
+			//angle between original reference edge and the connection line between the point and the new reference node inside the center sub-face
+			fp_type delta    = subFacePolar.angle + interiorAngle_fromSinSqe(refScale,SinaSq,newFaceGeom[nodeCode]/4,SinbSq);
+			fp_type tmpAngle = COS(delta);
+
+			//distance to the original reference node
+			fp_type SinSqdHalf = calcSinSqEdgeHalfSAS(nextScale,SinSqaHalf,tmpAngle,SinSqeHalf);
+
+			//using spherical sine law is unstable near 90 degree angle --> using cosine law & interiorAngle instead
+			tmpAngle = SIN(delta)*SQRT((SinSqeHalf-SinSqeHalf*LDEXP(SinSqeHalf,-nextScale))/(SinSqdHalf-SinSqdHalf*LDEXP(SinSqdHalf,-nextScale)));
+			if (tmpAngle > 0.95) tmpAngle = interiorAngle_fromSinSqeHalf(nextScale,SinSqaHalf,SinSqdHalf,SinSqeHalf);
+			else tmpAngle = ASIN(tmpAngle);
+
+			return {SinSqdHalf,tmpAngle};
+		}
+		else if (fCode == edgeCode)
+		{
+			scaleExp_type refScale = 2*refNodeLevel+2;
+			unsigned short otherCode = newCode(edgeCode,nodeCode);
+
+			fp_type SinSqaHalf = newFaceGeom[otherCode];
+			inFacePolarSH subFacePolar(calcFacePolarSH(nextLevel, edgeCode, otherCode, newFaceGeom, pointLevel, location));
+
+			fp_type SinSqeHalf = subFacePolar.SinSqdHalf/4;
+			fp_type delta    = subFacePolar.angle;
+
+			fp_type SinSqdHalf = calcSinSqEdgeHalfSAS(refScale,SinSqaHalf,COS(delta),SinSqeHalf);
+
+			//using spherical sine law is unstable near 90 degree angle --> cannot happen in this case
+			return {SinSqdHalf,
+			            interiorAngle(refNodeLevel,nodeCode,faceGeom) 
+			            - ASIN(SIN(delta) * SQRT((SinSqeHalf-SinSqeHalf*LDEXP(SinSqeHalf,-refScale))/(SinSqdHalf-SinSqdHalf*LDEXP(SinSqdHalf,-refScale))))};
+		}
+		else
+		{
+			scaleExp_type refScale = 2*refNodeLevel;
+			scaleExp_type nextScale = refScale+2;
+			unsigned short otherCode = newCode(edgeCode,nodeCode);
+
+			fp_type SinSqaHalf = calcEdgeBisection(refScale, faceGeom[edgeCode]);
+			inFacePolarSH subFacePolar(calcFacePolarSH(nextLevel, otherCode, edgeCode, newFaceGeom, pointLevel, location));
+
+			fp_type SinSqeHalf    = subFacePolar.SinSqdHalf/4;
+			fp_type delta     = subFacePolar.angle;
+
+			fp_type SinSqdHalf = calcSinSqEdgeHalfSAS(nextScale,SinSqaHalf,COS(delta),SinSqeHalf);
+
+			//using spherical sine law is unstable near 90 degree angle --> cannot happen in this case
+			return {SinSqdHalf,ASIN(SIN(delta) * SQRT((SinSqeHalf-SinSqeHalf*LDEXP(SinSqeHalf,-nextScale))/(SinSqdHalf-SinSqdHalf*LDEXP(SinSqdHalf,-nextScale))))};
+		}
+	}
+	return {0,0};
+}
+
+
 
 //calculate the distance between two points: both can be node or center point, determined by location
 //for a distance d: return value is Sin(d/2), bool reference "mirror" is used to determine if it is the distance to the mirror point
@@ -708,6 +983,51 @@ SPIRID::sGrid::sinDistanceHalf(size_t levelP1, const sGrid& P1, unsigned short l
                                size_t levelP2, const sGrid& P2, unsigned short locationP2,
                                bool& mirror)
 {
+	//start by finding the highest common node for P1 and P2
+	pointPairRefNode commonN(findHighestRefNode(levelP1, P1, levelP2, P2));
+
+	//if no reference node then we calculate the distance to a mirrored point
+	mirror = false;
+	if (commonN.nodeCode1 == 0) //means no reference node
+	{
+		mirror = true;
+		sGrid P3(P2);
+		commonN = findHighestRefNode(levelP1, P1, levelP2, P3.mirror());
+	}
+
+	//calculate distance & angle from points to reference nodes
+	size_t levelN1 = commonN.level1;
+	size_t levelN2 = commonN.level2;
+	inFacePolarSH localP1(P1.calcFacePolarSH(levelN1, commonN.nodeCode1, commonN.edgeCode1, levelP1, locationP1));
+	inFacePolarSH localP2(P2.calcFacePolarSH(levelN2, commonN.nodeCode2, commonN.edgeCode2, levelP2, locationP2));
+	fp_type SinSqaHalf = localP1.SinSqdHalf;
+	fp_type SinSqbHalf = localP2.SinSqdHalf;
+
+	//calculate angle between the connections P1-referenceNode-P2
+	fp_type cosGapAngle = COS(localP1.angle + commonN.signAngle2*localP2.angle + commonN.gapAngle);
+
+	//check for level differences (occurs when one of the points is closer to the reference node)
+	size_t levelOffset = 0;
+	size_t minLevel = levelN1;
+	if (levelN1>levelN2)
+	{
+		levelOffset=levelN1-levelN2;
+		minLevel = levelN2;
+		SinSqaHalf = LDEXP(SinSqaHalf,-levelOffset*2);
+	}
+	else
+	{
+		levelOffset=levelN2-levelN1;
+		SinSqbHalf = LDEXP(SinSqbHalf,-levelOffset*2);
+	}
+
+	//calculate 2^minLevel*Sin(result/2) using special form of spherical cosine law
+	fp_type interimResult = robustCalcSinEdgeHalfSAS(2*minLevel+2,SinSqaHalf,cosGapAngle,SinSqbHalf);
+
+	return scaledFP(interimResult, minLevel);
+
+
+/*
 	//start by finding the highest common node for P1 and P2
 	pointPairRefNode commonN(findHighestRefNode(levelP1, P1, levelP2, P2));
 
@@ -750,6 +1070,8 @@ SPIRID::sGrid::sinDistanceHalf(size_t levelP1, const sGrid& P1, unsigned short l
 	fp_type interimResult = calcSinEdgeHalfSAS(minLevel,SinaSq,cosGapAngle,SinbSq);
 
 	return scaledFP(interimResult, minLevel);
+*/
+    
 }
 //distance calculation for points: return value is the actual distance in [0,pi]
 SPIRID::scaledFP
