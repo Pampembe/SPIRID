@@ -80,7 +80,9 @@ public:
 		}
 		return (mantissa < LDEXP(y.mantissa,scaleExponent-y.scaleExponent));
 	}
-	inline bool operator > (const scaledFP& y) const {return !(operator < (y));};
+	inline bool operator > (const scaledFP& y) const {
+		return !(operator < (y));
+	};
 	inline bool operator != (const scaledFP& y) const
 	{
 		if (y.scaleExponent > scaleExponent)
@@ -89,17 +91,23 @@ public:
 		}
 		return (mantissa != LDEXP(y.mantissa,scaleExponent-y.scaleExponent));
 	}
+	inline bool operator == (const scaledFP& y) const
+	{
+		return !(operator != (y));
+	}
 
 	scaledFP operator + (const scaledFP&) const;
 	scaledFP operator - (const scaledFP&) const;
 	scaledFP operator * (const scaledFP&) const;
 	scaledFP operator / (const scaledFP&) const;
 
-    scaledFP abs() const;
+	scaledFP abs() const;
 	fp_type toFPType() const; //convert to standard float
 };
 //standard output for scaledFP
 std::ostream& operator << (std::ostream& out, const scaledFP&);
+
+
 
 
 
@@ -108,13 +116,10 @@ class angle
 {
 
 public:
-/*
-    template<typename number>
-	inline angle(number n) : X(n) {}; //standard constructor
-	inline operator number() const {return X;}; // convert to number
-*/
-    template<typename number>
-    inline static number convertFromRadian(number X) {return X*unitScale;};
+	template<typename number>
+	inline static number convertFromRadian(number X) {
+		return X*unitScale;
+	};
 
 	static fp_type unitScale; // to convert radians/deg/...: radian-->unitScale=1; deg-->unitScale=180/Pi
 	static std::string unitSymbol; //after switching unit the output functions adds a symbol
@@ -124,16 +129,9 @@ public:
 	static void unitRad();
 	static void unitDeg();
 };
-//output for anlge
-/*
-template<typename number>
-std::ostream& SPIRID::operator << (std::ostream& out, const SPIRID::angle<number>& alpha)
-{
-	out << alpha * angle<number>::unitScale;
-	out << angle<number>::unitSymbol;
-	return out;
-}
-*/
+
+
+
 
 
 //polar coordinates of the sphere (polar and azimuthal angle, radius==1)
@@ -157,16 +155,20 @@ public:
 		return phi;
 	};
 
+	//geodesic distance between two points on the sphere
 	static fp_type distance(const sPolar& P1, const sPolar& P2);
+	//interior angle at Q a triangle in polar coordinates
+	static fp_type interiorAngle(
+	    const sPolar& P,
+	    const sPolar& Q,
+	    const sPolar& R);
+	//orientation of a triangle in polar coordinates
 	static unsigned short orientation(
 	    const sPolar& P,
 	    const sPolar& Q,
 	    const sPolar& R);
+	//oriented area of a triangle in polar coordinates
 	static fp_type orientedArea(
-	    const sPolar& P,
-	    const sPolar& Q,
-	    const sPolar& R);
-	static fp_type angle(
 	    const sPolar& P,
 	    const sPolar& Q,
 	    const sPolar& R);

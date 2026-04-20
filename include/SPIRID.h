@@ -85,10 +85,22 @@ public:
 	}
 
 
+private:
+	//calculate the distance between two points: both can be node or center point, determined by location
+	//for a distance d: return value is Sin(d/2), i.e. not scaled by grid level,
+	// but an implicit grid level can be determined from the exponent of the return value
+	//bool reference "mirror" becomes true when one of the point was mirrored for the calculation,
+	// in that case the actual distance is d=pi-2*ASIN(return value)
+	static scaledFP sinDistanceHalf(size_t level1, const sGrid& P1, unsigned short location1,
+	                                size_t level2, const sGrid& P2, unsigned short location2,
+	                                bool& mirror);
 
 
 
-	/******************** standard constructors and basic grid point property read-out and manipulation ********************/
+
+
+public:
+	/******************** standard constructors & basic grid point property read-out and manipulation ********************/
 	/*  A face is represented by a gridCode with depth+1 digits:
 	        1st digit (0..7): grid level 0, identifies the octant of the sphere
 	        nth digit (0..3): grid level n-1, identifies the sub-faces after successive divisions
@@ -156,9 +168,277 @@ public:
 
 	/* special points on the sphere (represented as pairs of <sGrid, nodeCode (0..3)> ) */
 	static const std::pair<sGrid,unsigned short> NorthOct0; //Octant 0, nodeCode 3
-	static const std::pair<sGrid,unsigned short> EastOct0; //Octant 0, nodeCode 2
+	static const std::pair<sGrid,unsigned short> EastOct0; //Octant 0, nodeCode 1
 	static const std::pair<sGrid,unsigned short> SouthOct7; //Octant 7, nodeCode 3
-	static const std::pair<sGrid,unsigned short> WestOct7; //Octant 7, nodeCode 2
+	static const std::pair<sGrid,unsigned short> WestOct7; //Octant 7, nodeCode 1
+
+
+
+
+
+	/******************** calculate geometric properties of single grid elements ********************/
+	/* Each point at every grid level corresponds to a
+	   face (faceCodes 0..3) with edges and nodes (codes 1..3).
+	   We can calculate edge lengths, interior angles and area for that face.
+	*/
+	//calculate the area of a face
+	inline scaledFP area(size_t level) const
+	{
+		return area(level, calcFaceGeometry(level));
+	};
+	//calculate the interior angle of a face at a node (1..3)
+	inline fp_type interiorAngle(size_t level, unsigned short nodeCode) const
+	{
+		return interiorAngle(level, nodeCode, calcFaceGeometry(level));
+	};
+	//get the orientation of a face
+	inline signed short orientation() const
+	{
+		signed short fOrientation = -1;
+		if (gridCode[0]) fOrientation *= -1;
+		if (gridCode[1]) fOrientation *= -1;
+		if (gridCode[2]) fOrientation *= -1;
+		return fOrientation;
+	}
+	//calculate an edge length (code 1..3)
+	scaledFP edgeLength(size_t level, unsigned short edgeCode) const;
+
+
+	/******************** auxiliary functions used to calculate face geometries ********************/
+	//data type used for face geometry data: lengths of the three edges E as Sin(E)^2*2^(2*level)
+	struct faceGeometry
+	{
+		fp_type SinaSq;
+		fp_type SinbSq;
+		fp_type SincSq;
+
+		inline fp_type operator[] (unsigned short edgeCode) const
+		{
+			switch (edgeCode)
+			{
+			case 1:
+				return SinaSq;
+			case 2:
+				return SinbSq;
+			case 3:
+				return SincSq;
+			default:
+				return 0;
+			}
+		}
+	};
+	//calculate face geometry data at a certain level
+	faceGeometry calcFaceGeometry(size_t level = -1) const;
+
+	//calculate the interior angle of a face at a node (1..3) given pre-calculated geometry data as Sin(edge lengths)^2
+	static fp_type interiorAngle(size_t level, unsigned short nodeCode, const faceGeometry&);
+	//calculate the area of a face given pre-calculated geometry data as Sin(edge lengths)^2
+	static scaledFP area(size_t level, const faceGeometry&);
+
+private:
+	//calculate face geometry data at the next grid level given pre-calculated geometry data at the current level
+	static void stepupFaceGeometryFrom(size_t currentLevel, unsigned short nextFaceCode, faceGeometry& currentFaceGeometry);
+
+
+	/************************* auxiliary functions with basic formulas used in geometry calculations *************************/
+	//calculate Sin(a/2)^2 from Sin(a)^2: input 2^scaleSq*Sin(a)^2, output 2^(scaleSq+2)*Sin(a/2)^2 ( scaleSq=2*level)
+	inline static fp_type calcSinSqLengthHalf(scaleExp_type scaleSq, fp_type SinaSq)
+	{
+		return (2*SinaSq)/(1 + SQRT(1 - LDEXP(SinaSq,-scaleSq)));
+	};
+	//calculate the interior angle at node 3 of a triangle with edge lengths E1..3, given as 2^scale*Sin(E)^2 (scale = 2*level )
+	static fp_type interiorAngle_fromSinSqe(scaleExp_type scale,
+	                                        fp_type SinE1Sq,
+	                                        fp_type SinE2Sq,
+	                                        fp_type SinE3Sq);
+	//calculate the interior angle at node 3 of a triangle with edge lengths E1..3, given as 2^scale*Sin^2(E/2) (scale = 2*level+2 )
+	static fp_type interiorAngle_fromSinSqeHalf(scaleExp_type scale,
+	        fp_type SinSqE1Half,
+	        fp_type SinSqE2Half,
+	        fp_type SinSqE3Half);
+	//calculate the area of a triangle given edge lengths
+	//      output: 2^(2*level+4)*Sin(area/4)^2
+	//      input: edge lengths L as 2^(2*(level+1))*Sin[L/2]^2)
+	//      scale: 2*leve+2
+	static fp_type sinSqQuarterArea(scaleExp_type scale,
+	                                fp_type sinSqE1Half,
+	                                fp_type sinSqE2Half,
+	                                fp_type sinSqE3Half);
+	//calculate third edge length d in a spherical triangle, given side-angle-side (all edge lengths L as 2^scaleSq*Sin(L)^2, scaleSq=2*level)
+	//      return value is 2^scaleSq*Sin(d)^2, i.e., does not distinguish between d and pi - d
+	//      input lengths L as 2^scaleSq*Sin(L)^2 and angle delta as Cos(delta)
+	inline static fp_type calcSinSqEdgeSAS(scaleExp_type scaleSq,
+	                                       fp_type SinaSq,
+	                                       fp_type cosDelta,
+	                                       fp_type SinbSq)
+	{
+		return SinaSq + SinbSq - (cosDelta*cosDelta+1) * SinaSq*LDEXP(SinbSq,-scaleSq)
+		       - 2*cosDelta * SQRT(SinaSq*SinbSq * (1-LDEXP(SinaSq,-scaleSq))*(1-LDEXP(SinbSq,-scaleSq)));
+	};
+	//calculate third edge length d in a spherical triangle, given side-angle-side (all edge lengths L as 2^scaleSq*Sin(L/2)^2, scaleSq=2*level+2)
+	//      return value is 2^scaleSq*Sin(d/2)^2
+	//      input lengths L as 2^scaleSq*Sin(L/2)^2 and angle delta as Cos(delta)
+	inline static fp_type calcSinSqEdgeHalfSAS(
+	    scaleExp_type scaleSq, //scaleSq is 2*level+2
+	    fp_type SinSqaHalf,
+	    fp_type cosDelta,
+	    fp_type SinSqbHalf)
+	{
+		return SinSqaHalf + SinSqbHalf - SinSqaHalf*LDEXP(SinSqbHalf,-scaleSq+1)
+		       - 2*cosDelta*SQRT( SinSqaHalf*SinSqbHalf * (1-LDEXP(SinSqaHalf,-scaleSq))*(1-LDEXP(SinSqbHalf,-scaleSq)) );
+	};
+	//calculate third edge length d in a spherical triangle, given side-angle-side ( scaleSq=2*level+2 )
+	//      return value is 2^(scaleSq/2)*Sin(d/2)
+	//      input lengths L as 2^(scaleSq)*Sin(L/2)^2 and angle delta as Cos(delta)
+	//near a==b and delta==0 then the result is dominated by rounding errors,
+	//this function applies a modified calculation formula to minimize impact of rounding errors
+	static fp_type calcSinEdgeHalfSAS(scaleExp_type scaleSq,
+	                                  fp_type SinSqaHalf,
+	                                  fp_type cosDelta,
+	                                  fp_type SinSqbHalf);
+
+
+
+
+
+public:
+	/******************** calculate local polar coordinates inside a grid face ********************/
+	//for a point at level within a face at refNodeLevel: returns distance to a node and angle to an edge
+	sPolar toLocalPolar(
+	    size_t refNodeLevel,
+	    unsigned short refNodeCode,
+	    unsigned short refEdgeCode,
+	    size_t level,
+	    unsigned short location = 0) const;
+	//as above, with level=depth and location=0
+	inline sPolar toLocalPolar(size_t refNodeLevel, unsigned short nodeCode, unsigned short edgeCode) const
+	{
+		return toLocalPolar(refNodeLevel, nodeCode, edgeCode, depth(), 0);
+	};
+
+private:
+	/* auxiliary functions used to calculate local polar coordinates inside a face */
+	// data type for distance and direction data (local polar coordinates):
+	//      distance d as 2^(2*level+2)*Sin^2(d/2), angle in standard radians
+	struct inFacePolar
+	{
+		//distance between a point and a node (stored as as Sin^2(d/2)*2^(2*level+2))
+		fp_type SinSqdHalf;
+		//angle between an edge and the connection between a point and a node
+		fp_type angle;
+	};
+	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel
+	inFacePolar calcFacePolar(
+	    size_t refNodeLevel,
+	    unsigned short nodeCode,
+	    unsigned short edgeCode,
+	    size_t pointLevel,
+	    unsigned short location = 0) const;
+	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel, given pre-calculated geometry data
+	inFacePolar calcFacePolar(
+	    size_t refNodeLevel,
+	    unsigned short nodeCode,
+	    unsigned short edgeCode,
+	    const faceGeometry&,
+	    size_t pointLevel,
+	    unsigned short location = 0) const;
+	//flat geometry approximation:
+	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel, given pre-calculated geometry data
+	inFacePolar calcFlatFacePolar(
+	    size_t refNodeLevel,
+	    unsigned short nodeCode,
+	    unsigned short edgeCode,
+	    const faceGeometry&,
+	    size_t pointLevel,
+	    unsigned short location = 0) const;
+
+
+
+
+private:
+	/******************** auxiliary functions for the calculation of distances on the sphere in grid coordinates ********************/
+	/* calculation of the distance between two points P1 & P2:
+	    first step is to find out which is the highest grid level where the faces of P1 and P2 have a common node (refNode)
+	        the grid level can be different for P1 & P2 (if one of the points is closer to the refNode)
+	    then we calculate the distance of P1 & P2 to this refNode and the angle between the respective connections
+	    finally we use the spherical cosine law to calculate the distance
+	*/
+	//data type used for information about the refNode and the angle between the corresponding faces
+	struct pointPairRefNode
+	{
+		// grid level, nodeCode & edgeCode for common node in face P1
+		size_t level1;
+		unsigned short nodeCode1;
+		unsigned short edgeCode1;
+
+		// grid level, nodeCode & edgeCode for common node in face P2
+		size_t level2;
+		unsigned short nodeCode2;
+		unsigned short edgeCode2;
+
+		//the angle between edgeCode1 and edgeCode2 at the common node
+		fp_type gapAngle;
+
+		/* For point distances we calculate local polar coordinates first.
+		   Depending on the face arrangement we need either the sum or the difference of the local azimuthal angles phi.
+		   --> final formula is phi1 + gapAngle + signAngle2*phi1	*/
+		short signAngle2;
+
+		// {0,0,0, 0,0,0, 0,0} means no common node in any grid level --> will check again a mirrored point
+
+		//output pointPairRefNode data
+		std::ostream& print(std::ostream&);
+	};
+
+	//main function to get reference node data (including gapAngle):
+	// this is independent on whether we refer to the center point or a node of the face
+	static pointPairRefNode findHighestRefNode(size_t level1, const sGrid& P1, size_t level2, const sGrid& P2);
+	//as above, point level is the depth of the face
+	static pointPairRefNode findHighestRefNode(const sGrid& P1, const sGrid& P2)
+	{
+		return findHighestRefNode(P1.depth(), P1, P2.depth(), P2);
+	};
+
+	//auxliary function for pointPairRefNode search:
+	// used when P1 and P2 are in the same face at all lower levels (level-1)
+	static pointPairRefNode sameFaceStepupTo(size_t level, size_t level1, const sGrid& P1, size_t level2, const sGrid& P2);
+	//auxliary function for pointPairRefNode search:
+	// used when the faces of P1 and P2 at level-1 share a common edge
+	static pointPairRefNode commonEdgeStepupTo(size_t level, unsigned short edgeCode, bool orientationMatch, size_t level1, const sGrid& P1, size_t level2, const sGrid& P2);
+	//auxliary function for pointPairRefNode search:
+	// assuming faceCode at startlevel-1 equals nodeCode: until which level nodeCode repeats?
+	inline static size_t lastLevelAtNode(size_t startLevel, unsigned short nodeCode, size_t endLevel, const sGrid& P)
+	{
+		while (P.at(startLevel)==nodeCode && startLevel<=endLevel)
+		{
+			startLevel++;
+		};
+		return startLevel-1;
+	};
+
+
+
+
+
+private:
+	/******************** actual code of a grid point and calculation accuracy settings ********************/
+	//internal representation of the gridCode
+	std::vector<bool> gridCode;
+
+	//calculation accuracy (accuracyBits cannot be larger than digits of fp_type)
+	static size_t accuracyBits;
+	//if accuracy is A then the difference between flat and spherical triangles above level A/2 is negligible
+	static size_t minDepthFlatApprox;
+	//if accuracy is A then the difference Sin(x)-x for numbers below 2^(-A/3) is negligible
+	static size_t minScaleSinXToX;
+
+public:
+	//calculation accuracy (accuracyBits not larger than digits of fp_type)
+	static void setAccuracyBits(size_t);
+	inline static size_t getAccuracyBits()
+	{
+		return accuracyBits;
+	};
 
 
 
@@ -173,6 +453,7 @@ public:
 private:
 	//assign the neighbor of the current face to an existing sGrid object, assuming its depth is already at level
 	static sGrid& assignNeighborFace(size_t level, unsigned short edgeCode, sGrid& neighbor, bool& orientationMatch);
+
 
 public:
 	// given two nodes with code1 != code2 in {1,2,3} it is sometimes useful to get the third remaining code
@@ -281,322 +562,6 @@ public:
 	}
 	subGridScanner begin(size_t scanLevel, size_t minLevel = 1) const;
 	subGridScanner end() const;
-
-
-
-
-
-
-private:
-	/* calculation of the distance between two points P1 & P2:
-	    first step is to find out which is the highest grid level where the faces of P1 and P2 have a common node
-	        the grid level can be different for P1 & P2 (if one of the points is closer to the common node)
-	    then we calculate the distance of P1 & P2 to this common node and the angle between the respective connections
-	    finally we use the spherical cosine law to calculate the distance
-	*/
-	//data type used for information about the common node and the angle between the corresponding faces
-	struct pointPairRefNode
-	{
-		// {0,0,0, 0,0,0, 0,0} means no common node in any grid level --> check again a mirrored point
-
-		// grid level, nodeCode & edgeCode for common node in face P1
-		size_t level1;
-		unsigned short nodeCode1;
-		unsigned short edgeCode1;
-
-		// grid level, nodeCode & edgeCode for common node in face P2
-		size_t level2;
-		unsigned short nodeCode2;
-		unsigned short edgeCode2;
-
-		//the angle between edgeCode1 and edgeCode2 at the common node
-		fp_type gapAngle;
-
-		/* For point distances we calculate local polar coordinates first.
-		   Depending on the face arrangement we need either the sum or the difference of the local azimuthal angles phi.
-		   --> final formula is phi1 + gapAngle + signAngle2*phi1	*/
-		short signAngle2;
-
-		//output pointPairRefNode data
-		std::ostream& print(std::ostream&);
-	};
-	//main function to get common node data (including gapAngle): this is independent on whether we refer to the center point of a node of the face
-	static pointPairRefNode findHighestRefNode(size_t level1, const sGrid& P1, size_t level2, const sGrid& P2);
-	//as above, point level is the depth of the face
-	static pointPairRefNode findHighestRefNode(const sGrid& P1, const sGrid& P2)
-	{
-		return findHighestRefNode(P1.depth(), P1, P2.depth(), P2);
-	};
-	//auxliary function used when P1 and P2 are in the same face at all lower levels (level-1)
-	static pointPairRefNode sameFaceStepupTo(size_t level, size_t level1, const sGrid& P1, size_t level2, const sGrid& P2);
-	//auxliary function used when the faces of P1 and P2 at level-1 share a common edge
-	static pointPairRefNode commonEdgeStepupTo(size_t level, unsigned short edgeCode, bool orientationMatch, size_t level1, const sGrid& P1, size_t level2, const sGrid& P2);
-	//auxiliary function: assuming faceCode at startlevel-1 equals nodeCode: until which level nodeCode repeats?
-	inline static size_t lastLevelAtNode(size_t startLevel, unsigned short nodeCode, size_t endLevel, const sGrid& P)
-	{
-		while (P.at(startLevel)==nodeCode && startLevel<=endLevel)
-		{
-			startLevel++;
-		};
-		return startLevel-1;
-	};
-
-
-
-
-
-public:
-	//calculation accuracy (accuracyBits cannot be larger than digits of fp_type)
-	static void setAccuracyBits(size_t);
-	inline static size_t getAccuracyBits()
-	{
-		return accuracyBits;
-	};
-
-
-
-	/* geometry related functions */
-	/* Each point at every grid level corresponds to a
-	   face (faceCodes 0..3) with edges and nodes (codes 1..3).
-	   We can calculate edge lengths, interior angles and area for that face.
-	*/
-	//get the orientation of a face
-	inline signed short orientation() const
-	{
-		signed short fOrientation = 1;
-		if (gridCode[0]) fOrientation *= -1;
-		if (gridCode[1]) fOrientation *= -1;
-		if (gridCode[2]) fOrientation *= -1;
-		return fOrientation;
-	}
-	//calculate the area of a face
-	inline scaledFP area(size_t level) const
-	{
-		return area(level, calcFaceGeometry(level));
-	};
-	//calculate an edge length (code 1..3)
-	scaledFP edgeLength(size_t level, unsigned short edgeCode) const;
-	//calculate the interior angle of a face at a node (1..3)
-	inline fp_type interiorAngle(size_t level, unsigned short nodeCode) const
-	{
-		return interiorAngle(level, nodeCode, calcFaceGeometry(level));
-	};
-private:
-	/* auxiliary functions used to calculate face geometries */
-	//data type used for geometry data of faces: lengths of the three edges E as Sin(E)^2*2^(2*level)
-	struct faceGeometry
-	{
-		fp_type SinaSq;
-		fp_type SinbSq;
-		fp_type SincSq;
-
-		inline fp_type operator[] (unsigned short edgeCode) const
-		{
-			switch (edgeCode)
-			{
-			case 1:
-			{
-				return SinaSq;
-				break;
-			}
-			case 2:
-			{
-				return SinbSq;
-				break;
-			}
-			case 3:
-			{
-				return SincSq;
-				break;
-			}
-			default:
-			{
-				return 0;
-				break;
-			}
-			}
-		}
-	};
-public:
-	//calculate face geometry data at a certain level
-	faceGeometry calcFaceGeometry(size_t level = -1) const;
-private:
-	//calculate face geometry data at the next grid level given pre-calculated geometry data at the current level
-	static void stepupFaceGeometryFrom(size_t currentLevel, unsigned short nextFaceCode, faceGeometry& currentFaceGeometry);
-	//calculate the interior angle of a face at a node (1..3) given pre-calculated geometry data as Sin(edge lengths)^2
-	static fp_type interiorAngle(size_t level, unsigned short nodeCode, const faceGeometry&);
-	//calculate the interior angle at node 3 of a face given pre-calculated geometry data (edge lengths as scaleFactor*Sin(E)^2)
-	static fp_type interiorAngle_fromSinSqe(scaleExp_type scale, fp_type SinE1Sq, fp_type SinE2Sq, fp_type SinE3Sq);
-	//calculate the interior angle at node 3 of a triangle with edge lengths E1..3, given as 2^scale*Sin^2(E/2) (scale = 2^(2*level+2) )
-	static fp_type interiorAngle_fromSinSqeHalf(scaleExp_type scale, fp_type SinSqE1Half, fp_type SinSqE2Half, fp_type SinSqE3Half);
-
-	//calculate the area of a face given pre-calculated geometry data as Sin(edge lengths)^2
-	static scaledFP area(size_t level, const faceGeometry&);
-	//calculate the area of a face given pre-calculated geometry
-	//      output: 2^(2*level)*Sin(area/4)^2
-	//      input: edge lengths L as 2^(2*(level+1))*Sin[L/2]^2)
-	static fp_type sinSqQuarterArea(size_t level,
-	                                fp_type FourSinE1HalfSq,
-	                                fp_type FourSinE2HalfSq,
-	                                fp_type FourSinE3HalfSq);
-public:
-	/* auxiliary functions for special geometry related calculations */
-	//calculate third edge length d in a spherical triangle, given side-angle-side
-	//      return value is 2^scale*Sin(d/2); input lengths L as 2^(2*scale)*Sin(L)^2) and angle delta as Cos(delta)
-	static fp_type calcSinEdgeHalfSAS(scaleExp_type scale, fp_type SinaSq, fp_type cosDelta, fp_type SinbSq);
-	//calculate third edge length d in a spherical triangle, given side-angle-side
-	//      return value is 2^scale*Sin(d/2); input lengths L as 2^(2*scale)*Sin^2(L/2) and angle delta as Cos(delta)
-	static fp_type robustCalcSinEdgeHalfSAS(scaleExp_type scale, fp_type SinSqaHalf, fp_type cosDelta, fp_type SinSqbHalf);
-	//calculate third edge length d in a spherical triangle, given side-angle-side (all edge lengths L as 2^scale*Sin(L)^2)
-	//      return value is 2^scaleSq*Sin(d)^2, i.e., does not distinguish between d and pi - d
-	//      input lengths L as 2^(scaleSq)*Sin(L)^2) and angle delta as Cos(delta)
-	inline static fp_type calcSinSqEdgeSAS(scaleExp_type scaleSq, fp_type SinaSq, fp_type cosDelta, fp_type SinbSq)
-	{
-		return SinaSq + SinbSq - (cosDelta*cosDelta+1) * SinaSq*LDEXP(SinbSq,-scaleSq)
-		       - 2*cosDelta * SQRT(SinaSq*SinbSq * (1-LDEXP(SinaSq,-scaleSq))*(1-LDEXP(SinbSq,-scaleSq)));
-	};
-	//calculate third edge length d in a spherical triangle, given side-angle-side (all edge lengths L as 2^scaleSq*Sin(L/2)^2)
-	//      return value is 2^scaleSq*Sin(d/2)^2
-	//      input lengths L as 2^scaleSq*Sin(L/2)^2) and angle delta as Cos(delta)
-	inline static fp_type calcSinSqEdgeHalfSAS(
-	    scaleExp_type scaleSq, //scaleSq is 2*level+2
-	    fp_type SinSqaHalf,
-	    fp_type cosDelta,
-	    fp_type SinSqbHalf)
-	{
-		return SinSqaHalf + SinSqbHalf - SinSqaHalf*LDEXP(SinSqbHalf,-scaleSq+1)
-		       - 2*cosDelta*SQRT( SinSqaHalf*SinSqbHalf * (1-LDEXP(SinSqaHalf,-scaleSq))*(1-LDEXP(SinSqbHalf,-scaleSq)) );
-	};
-public:
-    //for edge bisections: calculate 4*Sin(a/2)^2 from Sin(a)^2
-	inline static fp_type calcEdgeBisection(scaleExp_type scaleSq, fp_type SinaSq)
-	{
-		return (2*SinaSq)/(1 + SQRT(1 - LDEXP(SinaSq,-scaleSq)));
-	};
-
-
-
-
-	/* convertion from and to polar coordinates: auxiliary functions */
-	//for a point at level within a face at refNodeLevel: returns distance to a node and angle to an edge
-	sPolar toLocalPolar(
-	    size_t refNodeLevel,
-	    unsigned short refNodeCode,
-	    unsigned short refEdgeCode,
-	    size_t level,
-	    unsigned short location = 0) const;
-	inline sPolar toLocalPolar(size_t refNodeLevel, unsigned short nodeCode, unsigned short edgeCode) const
-	{
-		return toLocalPolar(refNodeLevel, nodeCode, edgeCode, depth(), 0);
-	};
-private:
-	/* auxiliary functions used to calculate local polar coordinates inside a face */
-	// data type for distance and direction data (local polar coordinates):
-	//      distance d as Sin(d)^2*2^(2*level), angle in standard radians
-public:
-	struct inFacePolar
-	{
-		//distance between a point and a node (stored as as Sin(d)^2*2^(2*level))
-		fp_type SinDistSq;
-		//angle between an edge and the connection between a point and a node
-		fp_type angle;
-	};
-	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel
-	inFacePolar calcFacePolar(
-	    size_t refNodeLevel,
-	    unsigned short nodeCode,
-	    unsigned short edgeCode,
-	    size_t pointLevel,
-	    unsigned short location = 0) const;
-	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel, given pre-calculated geometry data
-	inFacePolar calcFacePolar(
-	    size_t refNodeLevel,
-	    unsigned short nodeCode,
-	    unsigned short edgeCode,
-	    const faceGeometry&,
-	    size_t pointLevel,
-	    unsigned short location = 0) const;
-	//flat geometry approximation:
-	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel, given pre-calculated geometry data
-	inFacePolar calcFlatFacePolar(
-	    size_t refNodeLevel,
-	    unsigned short nodeCode,
-	    unsigned short edgeCode,
-	    const faceGeometry&,
-	    size_t pointLevel,
-	    unsigned short location = 0) const;
-
-	struct inFacePolarSH
-	{
-		//distance between a point and a node (stored as as Sin^2(d/2)*2^(2*level+2))
-		fp_type SinSqdHalf;
-		//angle between an edge and the connection between a point and a node
-		fp_type angle;
-	};
-	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel
-	inFacePolarSH calcFacePolarSH(
-	    size_t refNodeLevel,
-	    unsigned short nodeCode,
-	    unsigned short edgeCode,
-	    size_t pointLevel,
-	    unsigned short location = 0) const;
-	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel, given pre-calculated geometry data
-	inFacePolarSH calcFacePolarSH(
-	    size_t refNodeLevel,
-	    unsigned short nodeCode,
-	    unsigned short edgeCode,
-	    const faceGeometry&,
-	    size_t pointLevel,
-	    unsigned short location = 0) const;
-	//flat geometry approximation:
-	//calculate local polar coordinates of a point (pointLevel, location) with respect to nodeCode & edgeCode at refNodeLevel, given pre-calculated geometry data
-	inFacePolarSH calcFlatFacePolarSH(
-	    size_t refNodeLevel,
-	    unsigned short nodeCode,
-	    unsigned short edgeCode,
-	    const faceGeometry& faceGeom,
-	    size_t pointLevel,
-	    unsigned short location = 0) const
-	    {
-	        inFacePolar x(calcFlatFacePolar(refNodeLevel, nodeCode, edgeCode, faceGeom, pointLevel, location));
-	        return {x.SinDistSq, x.angle};
-	    };
-
-
-
-
-
-
-
-
-
-
-
-
-public:
-	/* functions to determine relations between multiple points on the sphere */
-	//calculate the distance between two points: both can be node or center point, determined by location
-	//for a distance d: return value is Sin(d/2), bool reference "mirror" is used to determine if it is the distance to the mirror point
-	static scaledFP sinDistanceHalf(size_t level1, const sGrid& P1, unsigned short location1,
-	                                size_t level2, const sGrid& P2, unsigned short location2,
-	                                bool& mirror);
-
-
-
-
-
-
-private:
-	//internal representation of the gridCode
-	std::vector<bool> gridCode;
-
-	//calculation accuracy (accuracyBits cannot be larger than digits of fp_type)
-	static size_t accuracyBits;
-	//if accuracy is A then the difference between flat and spherical triangles above level A/2 is negligible
-	static size_t minDepthFlatApprox;
-	//if accuracy is A then the difference Sin(x)-x for numbers below 2^(-A/3) is negligible
-	static size_t minScaleSinXToX;
-
 
 
 

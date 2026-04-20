@@ -20,28 +20,34 @@ using namespace SPIRID;
 //#define FACE_GEOMETRY_CHECK
 //#define TO_POLAR_CHECK
 
-class refPointTestFunction
-{
-	sPolar refPoint;
-public:
-	refPointTestFunction(const sPolar& P) : refPoint(P) {};
-	scaledFP operator() (size_t level, const sGrid& P, unsigned short location) const
-	{
-		sPolar TP(P.toPolar(level,location));
-		return scaledFP(SQRT((TP.getTheta()-refPoint.getTheta())*(TP.getTheta()-refPoint.getTheta())
-		                     + (TP.getPhi()-refPoint.getPhi())*(TP.getPhi()-refPoint.getPhi())),0);
-	};
-};
-
 
 int main()
 {
 	angle::unitDeg();
-	size_t level = sGrid::getAccuracyBits();
+	std::cout << sGrid(std::vector<unsigned short>({0,0,0})).area(2) *
+	          sGrid(std::vector<unsigned short>({0,0,0})).orientation() << std::endl;
+	std::cout << sPolar::orientedArea(
+	              sGrid(std::vector<unsigned short>({0,0,0})).toPolar(2,1),
+	              sGrid(std::vector<unsigned short>({0,0,0})).toPolar(2,2),
+	              sGrid(std::vector<unsigned short>({0,0,0})).toPolar(2,3))*16 << std::endl;
 
 #ifdef MIN_SEARCH_CHECK
-
 	/********************  testing conversion from sPolar to sGrid  *********************/
+	class refPointTestFunction
+	{
+		sPolar refPoint;
+	public:
+		refPointTestFunction(const sPolar& P) : refPoint(P) {};
+		scaledFP operator() (size_t level, const sGrid& P, unsigned short location) const
+		{
+			sPolar TP(P.toPolar(level,location));
+			return scaledFP(SQRT((TP.getTheta()-refPoint.getTheta())*(TP.getTheta()-refPoint.getTheta())
+			                     + (TP.getPhi()-refPoint.getPhi())*(TP.getPhi()-refPoint.getPhi())),0);
+		};
+	};
+
+	size_t level = sGrid::getAccuracyBits();
+
 	size_t pointCount = 1000;
 	std::srand(0);
 	std::cout << "generate " << pointCount << " new sGrid points from sPolar point - random coordinates" << std::endl;
@@ -174,13 +180,13 @@ int main()
 	t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> robustSearchTimeTest = t2 - t1;
 
-    size_t largeOffsetCount = 0;
+	size_t largeOffsetCount = 0;
 	maxDifference = 0;
 	max_it_Search = 0;
 	for (size_t it = 0; it < pointCount; ++it)
 	{
-	    fp_type distance = sPolar::distance(polarPoints[it],gridPointsRobustSearchTest[it].toPolar());
-	    if (distance > 1e-3) largeOffsetCount++;
+		fp_type distance = sPolar::distance(polarPoints[it],gridPointsRobustSearchTest[it].toPolar());
+		if (distance > 1e-3) largeOffsetCount++;
 		if ( maxDifference < distance )
 		{
 			maxDifference = distance;
@@ -209,13 +215,13 @@ int main()
 	t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> fastSearchTimeTest = t2 - t1;
 
-    largeOffsetCount = 0;
+	largeOffsetCount = 0;
 	maxDifference = 0;
 	max_it_Search = 0;
 	for (size_t it = 0; it < pointCount; ++it)
 	{
-	    fp_type distance = sPolar::distance(polarPoints[it],gridPointsFastSearchTest[it].toPolar());
-	    if (distance > 1e-3) largeOffsetCount++;
+		fp_type distance = sPolar::distance(polarPoints[it],gridPointsFastSearchTest[it].toPolar());
+		if (distance > 1e-3) largeOffsetCount++;
 		if ( maxDifference < distance )
 		{
 			maxDifference = distance;
@@ -243,13 +249,13 @@ int main()
 	t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> hybridSearchTimeTest = t2 - t1;
 
-    largeOffsetCount = 0;
+	largeOffsetCount = 0;
 	maxDifference = 0;
 	max_it_Search = 0;
 	for (size_t it = 0; it < pointCount; ++it)
 	{
-	    fp_type distance = sPolar::distance(polarPoints[it],gridPointsHybridSearchTest[it].toPolar());
-	    if (distance > 1e-3) largeOffsetCount++;
+		fp_type distance = sPolar::distance(polarPoints[it],gridPointsHybridSearchTest[it].toPolar());
+		if (distance > 1e-3) largeOffsetCount++;
 		if ( maxDifference < distance )
 		{
 			maxDifference = distance;

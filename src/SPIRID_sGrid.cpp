@@ -9,9 +9,9 @@ SPIRID::sGrid::sGrid(const std::vector<bool>& bitCode) : gridCode(bitCode)
     if (size%2==0) gridCode.resize(size+1);
 }
 //sGrid constructor from a vector of face codes
-SPIRID::sGrid::sGrid(const std::vector<unsigned short>& faceCodes) : gridCode(1+2*faceCodes.size())
+SPIRID::sGrid::sGrid(const std::vector<unsigned short>& faceCodes) : gridCode(std::max(size_t(3),size_t(1+2*faceCodes.size())))
 {
-    for (size_t it = 0; it <= faceCodes.size(); ++it)
+    for (size_t it = 0; it < faceCodes.size(); ++it)
     {
         set(it, faceCodes[it]);
     }
@@ -184,9 +184,9 @@ SPIRID::sGrid::trunc()
 
 //special points
 const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::NorthOct0 = {SPIRID::sGrid(std::vector<bool>({0,0,0})),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::EastOct0  = {SPIRID::sGrid(std::vector<bool>({0,0,0})),1};
 const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::SouthOct7 = {SPIRID::sGrid(std::vector<bool>({1,1,1})),3};
-const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),2};
+const std::pair<SPIRID::sGrid,unsigned short> SPIRID::sGrid::WestOct7  = {SPIRID::sGrid(std::vector<bool>({1,1,1})),1};
 
 
 
@@ -599,13 +599,6 @@ SPIRID::sGrid::subGridScanner::operator == (const subGridScanner& s2) const
 
 
 
-
-
-
-
-
-
-
 void SPIRID::sGrid::print(std::ostream& out) const
 {
     out << "(F";
@@ -617,10 +610,7 @@ void SPIRID::sGrid::print(std::ostream& out) const
 std::ostream& SPIRID::operator << (std::ostream& out, const sGrid& P)
 {
     P.print(out);
-/*    out << "(F";
-    for (size_t it=0; it<=P.depth(); it++) out << P.at(it);
-    out << ")";
-*/    return out;
+    return out;
 }
 //output data of a common node
 std::ostream& SPIRID::sGrid::pointPairRefNode::print(std::ostream& out)

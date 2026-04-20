@@ -1,7 +1,7 @@
 #include <cmath>
 #include <SPIRID_aux.h>
 
-//haversine formula
+//haversine formula for the distance
 fp_type
 SPIRID::sPolar::distance(
     const sPolar& P1,
@@ -28,27 +28,10 @@ SPIRID::sPolar::distance(
 	}
 
 	return distance;
-
-	/* comparing coordinates directly to decide on mirror point in advance of the calculation is less effective for accuracy
-	if (ABS(P1.theta - P2.theta) < pi_2 && (ABS(P1.phi - P2.phi) < pi_2 || ABS(P1.phi - P2.phi) > 3*pi_2))
-	{
-		fp_type sinDeltaThetaHalf  = SIN((P1.theta - P2.theta)/2);
-		fp_type sinDeltaPhiHalf    = SIN((P1.phi   - P2.phi  )/2);
-		fp_type sinTheta1plus2Half = SIN((P1.theta + P2.theta)/2);
-
-		return 2*ASIN(SQRT(sinDeltaThetaHalf*sinDeltaThetaHalf + sinDeltaPhiHalf*sinDeltaPhiHalf*(sinTheta1plus2Half*sinTheta1plus2Half-sinDeltaThetaHalf*sinDeltaThetaHalf)));
-	}
-	else
-	{
-		fp_type sinDeltaThetaHalf  = SIN((P1.theta + P2.theta - pi)/2);
-		fp_type sinDeltaPhiHalf    = SIN((P1.phi   - P2.phi -   pi)/2);
-		fp_type sinTheta1plus2Half = SIN((P1.theta + pi - P2.theta)/2);
-
-		return pi - 2*ASIN(SQRT(sinDeltaThetaHalf*sinDeltaThetaHalf + sinDeltaPhiHalf*sinDeltaPhiHalf*(sinTheta1plus2Half*sinTheta1plus2Half-sinDeltaThetaHalf*sinDeltaThetaHalf)));
-	}
-	*/
 }
-fp_type SPIRID::sPolar::angle(
+
+//interior angle at Q a triangle in polar coordinates
+fp_type SPIRID::sPolar::interiorAngle(
     const sPolar& P,
     const sPolar& Q,
     const sPolar& R
@@ -60,6 +43,30 @@ fp_type SPIRID::sPolar::angle(
 
 	return ACOS( (COS(dPR)-COS(dPQ)*COS(dQR)) / (SIN(dPQ)*SIN(dPR)) );
 }
+//orientation of a triangle in polar coordinates
+unsigned short SPIRID::sPolar::orientation(
+    const sPolar& P,
+    const sPolar& Q,
+    const sPolar& R
+)
+{
+	fp_type Px = SIN(P.theta)*COS(P.phi);
+	fp_type Py = SIN(P.theta)*SIN(P.phi);
+	fp_type Pz = COS(P.theta);
+
+	fp_type Qx = SIN(Q.theta)*COS(Q.phi);
+	fp_type Qy = SIN(Q.theta)*SIN(Q.phi);
+	fp_type Qz = COS(Q.theta);
+
+	fp_type Rx = SIN(R.theta)*COS(R.phi);
+	fp_type Ry = SIN(R.theta)*SIN(R.phi);
+	fp_type Rz = COS(R.theta);
+
+	if (std::signbit(Px*(Qy*Rz-Qz*Ry)+Py*(Qz*Rx-Qx*Rz)+Pz*(Qx*Ry-Qy*Rx))) return -1;
+	return 1;
+}
+
+//oriented area of a triangle in polar coordinates
 fp_type SPIRID::sPolar::orientedArea(
     const sPolar& P,
     const sPolar& Q,
@@ -81,27 +88,6 @@ fp_type SPIRID::sPolar::orientedArea(
 	return 2*ATAN(
 	           (Px*(Qy*Rz-Qz*Ry) + Py*(Qz*Rx-Qx*Rz) + Pz*(Qx*Ry-Qy*Rx)) /
 	           (1 + Px*Qx+Py*Qy+Pz*Qz + Px*Rx+Py*Ry+Pz*Rz + Qx*Rx+Qy*Ry+Qz*Rz));
-}
-unsigned short SPIRID::sPolar::orientation(
-    const sPolar& P,
-    const sPolar& Q,
-    const sPolar& R
-)
-{
-	fp_type Px = SIN(P.theta)*COS(P.phi);
-	fp_type Py = SIN(P.theta)*SIN(P.phi);
-	fp_type Pz = COS(P.theta);
-
-	fp_type Qx = SIN(Q.theta)*COS(Q.phi);
-	fp_type Qy = SIN(Q.theta)*SIN(Q.phi);
-	fp_type Qz = COS(Q.theta);
-
-	fp_type Rx = SIN(R.theta)*COS(R.phi);
-	fp_type Ry = SIN(R.theta)*SIN(R.phi);
-	fp_type Rz = COS(R.theta);
-
-	if (std::signbit(Px*(Qy*Rz-Qz*Ry)+Py*(Qz*Rx-Qx*Rz)+Pz*(Qx*Ry-Qy*Rx))) return -1;
-	return 1;
 }
 
 
