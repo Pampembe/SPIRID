@@ -15,7 +15,7 @@ Code, Compile, Run and Debug online from anywhere in world.
 using namespace SPIRID;
 
 //#define MIN_SEARCH_CHECK
-//#define DISTANCE_ERROR_CHECK
+#define DISTANCE_ERROR_CHECK
 //#define GRID_NEIGHBOR_CHECK
 //#define FACE_GEOMETRY_CHECK
 //#define TO_POLAR_CHECK
@@ -280,7 +280,36 @@ int main()
 
 #ifdef DISTANCE_ERROR_CHECK
 	/********************  point distance calculations: comparing sGrid vs sPolar results  *********************/
-	std::cout << "Comparing distances between grid coordinates and polar coordinates (up to level 4):" << std::endl;
+	std::cout << "Comparing distances between grid coordinates and polar coordinates: random points" << std::endl;
+	std::srand(0);
+	size_t randomPointCount = 20;
+	for (size_t it = 0; it < randomPointCount; it++)
+	{
+		sPolar polar1(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);
+		sPolar polar2(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);
+		sGrid grid1(polar1);
+		sGrid grid2(polar2);
+
+        std::cout << grid1 << "-" << grid2 << ": " << sGrid::distance(grid1,grid2) << " - ";
+        std::cout << grid1.toPolar() << "-" << grid2.toPolar() << ": " << sPolar::distance(grid1.toPolar(),grid2.toPolar());
+        std::cout << " - difference: " << sGrid::distance(grid1,grid2).toFPType() - sPolar::distance(grid1.toPolar(),grid2.toPolar()) << std::endl;
+	}
+	std::cout << std::endl;
+	
+	std::cout << "Comparing distances between grid coordinates and polar coordinates: one point at different levels and its neighbor" << std::endl;
+	std::srand(0);
+	size_t maxNeighborLevel = 100;
+	sPolar polar0(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);
+	sGrid grid0(polar0,maxNeighborLevel);
+	for (size_t it = 0; it < maxNeighborLevel; it++)
+	{
+        std::cout << "level " << it << ": " << sGrid::distance(it,grid0,it,grid0.neighborFace(it,1)) << " - ";
+        std::cout << grid0.toPolar(it) << "-" << grid0.neighborFace(it,1).toPolar(it) << ": " << sPolar::distance(grid0.toPolar(it),grid0.neighborFace(it,1).toPolar(it));
+        std::cout << " - difference: " << sGrid::distance(it,grid0,it,grid0.neighborFace(it,1)).toFPType() - sPolar::distance(grid0.toPolar(it),grid0.neighborFace(it,1).toPolar(it)) << std::endl;
+	}
+	std::cout << std::endl;
+
+	std::cout << "Comparing distances between grid coordinates and polar coordinates (all points up to level 4):" << std::endl;
 	//initialize Q as all faces in levels 0,1,2,3
 	sGrid Q[512];
 	for (size_t it0 = 0; it0<8; it0++)
@@ -459,157 +488,35 @@ int main()
 	std::cout << std::endl;
 	std::cout << std::endl;
 
-	size_t refLevel = 29;
-	std::cout << "high level nodes polar coordinates in flat and spherical geometry: ";
-	std::cout << "{" << F0.calcFaceGeometry(refLevel)[1];
-	std::cout << "," << F0.calcFaceGeometry(refLevel)[2];
-	std::cout << "," << F0.calcFaceGeometry(refLevel)[3] << "}";
-	std::cout << std::endl;
-	sGrid::inFacePolar testSpher(F0.calcFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,0));
-	sGrid::inFacePolar testFlat(F0.calcFlatFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,0));
-	std::cout << "[F0,0] level 30 local polar (1,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,0);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,0);
-	std::cout << "[F0,0] level 30 local polar (1,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,0);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,0);
-	std::cout << "[F0,0] level 30 local polar (2,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,0);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,0);
-	std::cout << "[F0,0] level 30 local polar (2,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,0);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,0);
-	std::cout << "[F0,0] level 30 local polar (3,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,0);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,0);
-	std::cout << "[F0,0] level 30 local polar (3,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,1);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,1);
-	std::cout << "[F0,1] level 30 local polar (1,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,1);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,1);
-	std::cout << "[F0,1] level 30 local polar (1,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,1);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,1);
-	std::cout << "[F0,1] level 30 local polar (2,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,1);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,1);
-	std::cout << "[F0,1] level 30 local polar (2,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,1);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,1);
-	std::cout << "[F0,1] level 30 local polar (3,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,1);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,1);
-	std::cout << "[F0,1] level 30 local polar (3,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,2);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,2);
-	std::cout << "[F0,2] level 30 local polar (1,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,2);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,2);
-	std::cout << "[F0,2] level 30 local polar (1,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,2);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,2);
-	std::cout << "[F0,2] level 30 local polar (2,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,2);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,2);
-	std::cout << "[F0,2] level 30 local polar (2,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,2);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,2);
-	std::cout << "[F0,2] level 30 local polar (3,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,2);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,2);
-	std::cout << "[F0,2] level 30 local polar (3,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,3);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,2,F0.calcFaceGeometry(refLevel),30,3);
-	std::cout << "[F0,3] level 30 local polar (1,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,3);
-	testFlat = F0.calcFlatFacePolar(refLevel,1,3,F0.calcFaceGeometry(refLevel),30,3);
-	std::cout << "[F0,3] level 30 local polar (1,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,3);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,1,F0.calcFaceGeometry(refLevel),30,3);
-	std::cout << "[F0,3] level 30 local polar (2,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,3);
-	testFlat = F0.calcFlatFacePolar(refLevel,2,3,F0.calcFaceGeometry(refLevel),30,3);
-	std::cout << "[F0,3] level 30 local polar (2,3): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,3);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,1,F0.calcFaceGeometry(refLevel),30,3);
-	std::cout << "[F0,3] level 30 local polar (3,1): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	testSpher = F0.calcFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,3);
-	testFlat = F0.calcFlatFacePolar(refLevel,3,2,F0.calcFaceGeometry(refLevel),30,3);
-	std::cout << "[F0,3] level 30 local polar (3,2): (" << testSpher.SinDistSq << "," << testSpher.angle << ") ";
-	std::cout << "; flat: (" << testFlat.SinDistSq << "," << testFlat.angle << ") ";
-	std::cout << "; difference: (" << testSpher.SinDistSq-testFlat.SinDistSq << "," << testSpher.angle-testFlat.angle << ") ";
-	std::cout << std::endl;
-	std::cout << std::endl;
+	std::cout << "compare local polar coordinates for random points between different accuracy settings: ";
+	std::srand(0);
+	size_t randomPointCount = 10;
+	for (size_t it = 0; it < randomPointCount; it++)
+	{
+		sPolar polar(pi*rand()/RAND_MAX, two_pi*rand()/RAND_MAX);
+		sGrid grid(polar,40);
+		std::cout << "local polar coordinate wrt reference node, difference for " << polar << "-" << grid << std::endl;
+		for (size_t refLevel = 0; refLevel < 50; refLevel++)
+		{
+			std::cout << " reference node level: " << refLevel << ", accuracy bits: ";
+			sPolar localPolar = grid.toLocalPolar(refLevel,1,2);
+			for (size_t acc = 24; acc>20; acc--)
+			{
+				sGrid::setAccuracyBits(acc);
+				sPolar localPolarFlat = grid.toLocalPolar(refLevel,1,2);
+				std::cout << sGrid::getAccuracyBits();
+				std::cout << "(" << localPolar.getTheta() - localPolarFlat.getTheta();
+				std::cout << "," << localPolar.getPhi() - localPolarFlat.getPhi() << ") -- ";
+			}
+			sGrid::setAccuracyBits(20);
+			sPolar localPolarFlat = grid.toLocalPolar(refLevel,1,2);
+			std::cout << sGrid::getAccuracyBits();
+			std::cout << "(" << localPolar.getTheta() - localPolarFlat.getTheta();
+			std::cout << "," << localPolar.getPhi() - localPolarFlat.getPhi() << ")";
+			std::cout << std::endl;
+			sGrid::setAccuracyBits();
+		}
+	}
 #endif //TO_POLAR_CHECK
 
 

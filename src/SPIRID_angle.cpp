@@ -13,5 +13,5 @@ void SPIRID::angle::unitRad() {
 };
 void SPIRID::angle::unitDeg() {
 	unitScale=180/pi;
-	unitSymbol="\xB0";
+	unitSymbol="\u00B0";
 };

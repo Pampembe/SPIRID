@@ -6,6 +6,8 @@
 #include <vector> // grid based coordinate system uses vector<bool> to label points
 #include <list>   // for member function return values (like the list of neighbors)
 
+#include <limits> //to get the accuracy of fp_type
+
 #include <SPIRID_aux.h>
 
 //#define fastSearch_ConsistencyCheckLimit 1e-6 //perform consistency checks within fastMinSearch algorithm
@@ -434,7 +436,7 @@ private:
 
 public:
 	//calculation accuracy (accuracyBits not larger than digits of fp_type)
-	static void setAccuracyBits(size_t);
+	static void setAccuracyBits(size_t = std::numeric_limits<fp_type>::digits);
 	inline static size_t getAccuracyBits()
 	{
 		return accuracyBits;
@@ -446,6 +448,16 @@ public:
 
 public:
 	/****************************** grid topology related functions ******************************/
+	//stepping to the neighbor face (across a single edge)
+	inline sGrid neighborFace(unsigned short edgeCode) const
+	{
+	    return neighborFace(depth(), edgeCode);
+	};
+	//as above, includes check whether neighbor face has the same orientation
+	inline sGrid neighborFace(unsigned short edgeCode, bool& orientationMatch) const
+	{
+	    return neighborFace(depth(), edgeCode, orientationMatch);
+	};
 	//stepping to the neighbor face (across a single edge)
 	sGrid neighborFace(size_t level, unsigned short edgeCode) const;
 	//as above, includes check whether neighbor face has the same orientation
@@ -501,6 +513,8 @@ public:
 	// get a list of edges (four or six) which at level connect the nodeNeighborNodes above among each other
 	std::list<std::pair<sGrid, unsigned short> > nodeOuterRingEdges(size_t level, unsigned short nodeCode) const;
 
+
+
 	// subGridScanner can be used to similar as an iterator
 	// to scan through all sub-faces at scannerLevel in a given list of faces at gridMinLevel
 	class subGridScanner
@@ -529,9 +543,9 @@ public:
 		{
 			reset();
 		};
-		subGridScanner& operator = (const subGridScanner& X);
 		void reset();
 
+		subGridScanner& operator = (const subGridScanner& X);
 		inline subGridScanner& operator ++()
 		{
 			if (!stepToNextFace()) ++currentFace;
